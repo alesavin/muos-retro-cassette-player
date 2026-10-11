@@ -1,0 +1,5 @@
+dist/
+RetroCassette/data/
+RetroCassette/bin/*
+!RetroCassette/bin/README.md
+RetroCassette/game/assets/label.ttf
