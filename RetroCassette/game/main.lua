@@ -11,7 +11,6 @@ local Walkman = require("lib.walkman")
 local fs = require("lib.fs")
 local ui = require("lib.ui")
 
-local WIDTH, HEIGHT = 640, 480
 
 -- Shoulder buttons in the order the keys sit on the player.
 local KEY_FOR_ACTION = { l1 = "rew", l2 = "stop", r2 = "play", r1 = "ff", a = "play", b = "stop" }
@@ -20,21 +19,27 @@ local screen = "library" -- library | deck
 local fonts, deck, browser, walkman
 
 local function loadFonts()
+	-- The cassette is drawn scaled up, so its fonts are rasterised at that scale.
+	local dpi = Walkman.CASSETTE_SCALE
 	-- Drop a TTF at assets/label.ttf for a handwritten-style cassette label.
 	local labelFont = love.filesystem.getInfo("assets/label.ttf") and "assets/label.ttf"
 	local function labelSized(size)
 		if labelFont then
-			return love.graphics.newFont(labelFont, size)
+			return love.graphics.newFont(labelFont, size, "normal", dpi)
 		end
-		return love.graphics.newFont(size)
+		return love.graphics.newFont(size, "normal", dpi)
 	end
 	return {
-		title = labelSized(22),
-		side = labelSized(40),
+		cassette = {
+			title = labelSized(22),
+			side = labelSized(40),
+			small = love.graphics.newFont(15, "normal", dpi),
+			tiny = love.graphics.newFont(12, "normal", dpi),
+			mini = love.graphics.newFont(9, "normal", dpi),
+		},
 		medium = love.graphics.newFont(20),
 		small = love.graphics.newFont(15),
-		tiny = love.graphics.newFont(12),
-		mini = love.graphics.newFont(9),
+		wheel = love.graphics.newFont(11),
 	}
 end
 
@@ -113,7 +118,7 @@ end
 function love.load()
 	love.mouse.setVisible(false)
 	Settings.load()
-	Scaler.init(WIDTH, HEIGHT)
+	Scaler.init(Walkman.WIDTH, Walkman.HEIGHT)
 	fonts = loadFonts()
 	Sfx.init()
 	Durations.init()

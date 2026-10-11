@@ -6,6 +6,7 @@ local lg = love.graphics
 
 local View = {}
 
+local W = 720
 local ROW_H = 26
 local LIST_Y = 58
 
@@ -35,28 +36,28 @@ end
 
 function View.draw(browser, fonts)
 	setColor(BG)
-	lg.rectangle("fill", 0, 0, 640, 480)
+	lg.rectangle("fill", 0, 0, W, 480)
 
 	setColor(BAR)
-	lg.rectangle("fill", 0, 0, 640, 44)
+	lg.rectangle("fill", 0, 0, W, 44)
 	setColor(STRIPE1)
-	lg.rectangle("fill", 0, 44, 640, 5)
+	lg.rectangle("fill", 0, 44, W, 5)
 	setColor(STRIPE2)
-	lg.rectangle("fill", 0, 49, 640, 4)
+	lg.rectangle("fill", 0, 49, W, 4)
 	lg.setFont(fonts.medium)
 	setColor(TEXT)
 	lg.print("LIBRARY", 16, 10)
 	lg.setFont(fonts.small)
 	setColor(DIM)
 	local where = ui.safe(browser.path or "Music folders")
-	lg.printf(ui.ellipsize(fonts.small, where, 470), 150, 15, 474, "right")
+	lg.printf(ui.ellipsize(fonts.small, where, W - 170), 150, 15, W - 166, "right")
 
 	local entries = browser.entries
 	if #entries == 0 then
 		setColor(TEXT)
 		local msg = browser.path and "No folders or audio files here."
 			or "No music folder found.\nCreate MUSIC on your SD card (for example /mnt/sdcard/MUSIC)\nand copy MP3, OGG, FLAC or WAV files into it."
-		lg.printf(msg, 40, 180, 560, "center")
+		lg.printf(msg, 40, 180, W - 80, "center")
 	end
 	for row = 0, Browser.ROWS - 1 do
 		local i = browser.top + row
@@ -67,7 +68,7 @@ function View.draw(browser, fonts)
 		local y = LIST_Y + row * ROW_H
 		if i == browser.sel then
 			setColor(HIGHLIGHT)
-			lg.rectangle("fill", 8, y, 624, ROW_H - 2, 4, 4)
+			lg.rectangle("fill", 8, y, W - 16, ROW_H - 2, 4, 4)
 			setColor(INK)
 		else
 			setColor(TEXT)
@@ -78,7 +79,7 @@ function View.draw(browser, fonts)
 			noteIcon(22, y + 4)
 		end
 		local name = ui.safe(e.kind == "file" and fs.stem(e.name) or e.name)
-		lg.print(ui.ellipsize(fonts.small, name, 570), 46, y + 4)
+		lg.print(ui.ellipsize(fonts.small, name, W - 70), 46, y + 4)
 	end
 
 	if #entries > Browser.ROWS then
@@ -86,7 +87,7 @@ function View.draw(browser, fonts)
 		local barH = math.max(20, trackH * Browser.ROWS / #entries)
 		local barY = LIST_Y + (trackH - barH) * (browser.top - 1) / (#entries - Browser.ROWS)
 		lg.setColor(1, 1, 1, 0.15)
-		lg.rectangle("fill", 634, barY, 3, barH)
+		lg.rectangle("fill", W - 6, barY, 3, barH)
 	end
 end
 

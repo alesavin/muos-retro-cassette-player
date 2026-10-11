@@ -2,7 +2,7 @@ function love.conf(t)
 	t.identity = "retrocassette"
 	t.version = "11.4"
 	t.window.title = "Retro Cassette"
-	t.window.width = 640
+	t.window.width = 720
 	t.window.height = 480
 	t.window.resizable = true
 	-- The launcher sets RC_FULLSCREEN on the device; on a desktop the app opens in a window.

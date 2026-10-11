@@ -1,7 +1,11 @@
 # Retro Cassette
 
 A music player for [muOS](https://muos.dev) handhelds that shows a cassette
-inside a closed portable player. There are no on-screen icons or readouts. You
+inside a closed portable player. The handheld's own screen bezel acts as the
+player body, so the cassette fills the screen. The transport keys sit on the bottom
+edge, right above the shoulder buttons, and the volume wheel sits on the left
+edge next to the volume buttons. The layout is made for the Anbernic RG34XXSP
+(720×480); other screens get black bars. There are no on-screen icons or readouts. You
 can tell what the player is doing the way you would with a real one: from the
 keys that are pressed down, the turning reels, how much tape is on each reel
 and the play head against the tape.
@@ -17,7 +21,7 @@ Built with [LÖVE](https://love2d.org) 11.x (Lua).
   through the whole album, and the minute marks on the cassette window show the
   time: read it where the edge of the right-hand tape pack sits.
 - **The label** shows the song under the head and the folder (album or artist) name.
-- **The volume wheel** on the right side rolls to the current level, 0–10.
+- **The volume wheel** on the left edge rolls to the current level, 0–10.
 - **The keys stay down** like real ones. PLAY stays down while playing, and FF or
   REW stays down while winding. They pop up with a clunk at the end of the tape.
 
@@ -25,12 +29,13 @@ MP3, OGG, FLAC and WAV are supported.
 
 ## Controls
 
-The four keys on top of the player are the shoulder buttons, in the same order:
+The four keys along the bottom of the screen are the shoulder buttons, in the
+order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 
 | Button | Key | Stopped | Playing |
 | --- | --- | --- | --- |
 | L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted |
-| L2 | STOP | Opens the lid and goes back to the library | Stops; the tape stays where it is, so this is also pause |
+| L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is, so this is also pause |
 | R2 | PLAY | Plays | |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
 

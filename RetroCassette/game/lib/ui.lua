@@ -36,6 +36,18 @@ function ui.setScissor(x, y, w, h)
 	end
 end
 
+-- Clips to a rectangle given in the current transform's coordinates
+-- (love.graphics.setScissor ignores transforms).
+local function transformedRect(x, y, w, h)
+	local x1, y1 = lg.transformPoint(x, y)
+	local x2, y2 = lg.transformPoint(x + w, y + h)
+	return math.floor(x1), math.floor(y1), math.ceil(x2 - x1), math.ceil(y2 - y1)
+end
+
+function ui.clip(x, y, w, h)
+	lg.setScissor(transformedRect(x, y, w, h))
+end
+
 -- Prints text, scrolling it sideways when it doesn't fit in w.
 function ui.marquee(font, text, x, y, w, clock)
 	lg.setFont(font)
@@ -47,7 +59,7 @@ function ui.marquee(font, text, x, y, w, clock)
 	local span = tw + 60
 	local off = (math.max(0, clock - 1.5) * 35) % span
 	local sx, sy, sw, sh = lg.getScissor()
-	lg.intersectScissor(x, y - 2, w, font:getHeight() + 4)
+	lg.intersectScissor(transformedRect(x, y - 2, w, font:getHeight() + 4))
 	lg.print(text, math.floor(x - off), y)
 	lg.print(text, math.floor(x - off + span), y)
 	ui.setScissor(sx, sy, sw, sh)
@@ -64,6 +76,9 @@ function ui.icon(kind, x, y, s)
 	elseif kind == "ff" then
 		lg.polygon("fill", x, y, x, y + s, x + s / 2, y + s / 2)
 		lg.polygon("fill", x + s / 2, y, x + s / 2, y + s, x + s, y + s / 2)
+	elseif kind == "eject" then
+		lg.polygon("fill", x, y + s * 0.6, x + s, y + s * 0.6, x + s / 2, y)
+		lg.rectangle("fill", x, y + s * 0.75, s, s * 0.25)
 	elseif kind == "rew" then
 		lg.polygon("fill", x + s, y, x + s, y + s, x + s / 2, y + s / 2)
 		lg.polygon("fill", x + s / 2, y, x + s / 2, y + s, x, y + s / 2)

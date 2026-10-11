@@ -1,6 +1,8 @@
--- Draws a closed portable cassette player: the cassette seen through the lid
--- window, the transport keys along the top edge and the volume thumbwheel on
--- the side. Everything the player shows comes from these parts.
+-- Draws the cassette as seen through the tinted lid of a closed player. The
+-- handheld's own screen bezel is the player body, so only the parts that matter
+-- are drawn: the cassette filling the screen, the transport keys along the
+-- bottom edge above the real shoulder buttons (L1 L2 ... R2 R1 on the RG34XXSP
+-- hinge) and the volume wheel on the left edge, next to the volume buttons.
 local ui = require("lib.ui")
 local lg = love.graphics
 
@@ -8,11 +10,10 @@ local Walkman = {}
 Walkman.__index = Walkman
 
 local C = {
-	body = { 0.19, 0.20, 0.22 },
-	lid = { 0.23, 0.24, 0.26 },
-	print = { 0.62, 0.63, 0.66 },
+	interior = { 0.05, 0.05, 0.06 },
 	key = { 0.80, 0.81, 0.83 },
 	keySide = { 0.55, 0.56, 0.58 },
+	keyMark = { 0.35, 0.36, 0.38 },
 	shell = { 0.17, 0.17, 0.19 },
 	bottom = { 0.22, 0.22, 0.24 },
 	label = { 0.96, 0.92, 0.82 },
@@ -23,18 +24,27 @@ local C = {
 	tape = { 0.28, 0.18, 0.12 },
 }
 
--- Geometry on the 640x480 canvas.
-local BODY = { x = 16, y = 36, w = 608, h = 436 }
-local LID = { x = 36, y = 60, w = 568, h = 400 }
-local GLASS = { x = 58, y = 84, w = 524, h = 356 }
+Walkman.WIDTH, Walkman.HEIGHT = 720, 480
+
+-- The cassette is drawn in its own 500x316 coordinates (origin at SHELL) and
+-- scaled up to fill the screen.
+Walkman.CASSETTE_SCALE = 1.3
+local CASSETTE_X, CASSETTE_Y = 48, 8
 local SHELL = { x = 70, y = 96, w = 500, h = 316 }
 local LABEL = { x = 96, y = 116, w = 448, h = 196 }
 local WINDOW = { x = 186, y = 182, w = 268, h = 76 }
 local HUB_L, HUB_R, HUB_Y = 230, 410, 220
 local R_MIN, R_MAX = 23, 76
-local KEYS = { "rew", "stop", "play", "ff" }
-local KEY_W, KEY_GAP, KEY_X = 66, 12, 170
-local WHEEL = { x = 616, y = 200, w = 18, h = 110 }
+
+-- Keys in screen coordinates, left to right as the shoulder buttons sit.
+local KEYS = {
+	{ name = "rew", x = 14 },
+	{ name = "stop", x = 112 },
+	{ name = "play", x = 518 },
+	{ name = "ff", x = 616 },
+}
+local KEY_W, KEY_TOP, KEY_TRAVEL = 90, 444, 16
+local WHEEL = { x = 0, y = 210, w = 22, h = 180 }
 local WHEEL_STEP = 0.32 -- radians of wheel per volume notch
 
 -- Tape speed at the pack surface during play, in px/s. Reels turn at speed / radius,
@@ -56,7 +66,10 @@ function Walkman.new(fonts)
 	self.shown = 0
 	self.volumeShown = 0.8
 	self.head = 0 -- 0 = retracted, 1 = against the tape
-	self.keyDepth = { rew = 0, stop = 0, play = 0, ff = 0 }
+	self.keyDepth = {}
+	for _, k in ipairs(KEYS) do
+		self.keyDepth[k.name] = 0
+	end
 	self.titleClock = 0
 	self.lastTitle = nil
 	return self
@@ -74,7 +87,7 @@ function Walkman:update(dt, state)
 	self.volumeShown = approach(self.volumeShown, state.volume, 14, dt)
 	self.head = approach(self.head, state.headEngaged and 1 or 0, 20, dt)
 	for _, k in ipairs(KEYS) do
-		self.keyDepth[k] = approach(self.keyDepth[k], state.keys[k] and 1 or 0, 30, dt)
+		self.keyDepth[k.name] = approach(self.keyDepth[k.name], state.keys[k.name] and 1 or 0, 30, dt)
 	end
 	local rl, rr = packRadius(1 - self.shown), packRadius(self.shown)
 	-- Tape runs left to right during play, so both reels turn counter-clockwise.
@@ -141,7 +154,7 @@ function Walkman:drawScale(tapeLength)
 			break
 		end
 	end
-	lg.setFont(self.fonts.mini)
+	lg.setFont(self.fonts.cassette.mini)
 	lg.setLineWidth(1)
 	local m = 0
 	while m <= minutes do
@@ -154,7 +167,7 @@ function Walkman:drawScale(tapeLength)
 end
 
 function Walkman:drawCassette(info)
-	local f = self.fonts
+	local f = self.fonts.cassette
 
 	setColor(C.shell)
 	lg.rectangle("fill", SHELL.x, SHELL.y, SHELL.w, SHELL.h, 18, 18)
@@ -189,7 +202,7 @@ function Walkman:drawCassette(info)
 
 	-- Window: packs clipped to the opening, hubs, the printed scale, then glass.
 	local rl, rr = packRadius(1 - self.shown), packRadius(self.shown)
-	lg.setScissor(WINDOW.x, WINDOW.y, WINDOW.w, WINDOW.h)
+	ui.clip(WINDOW.x, WINDOW.y, WINDOW.w, WINDOW.h)
 	lg.setColor(0.06, 0.05, 0.05)
 	lg.rectangle("fill", WINDOW.x, WINDOW.y, WINDOW.w, WINDOW.h)
 	drawPack(HUB_L, HUB_Y, rl)
@@ -224,7 +237,7 @@ function Walkman:drawCassette(info)
 
 	-- Play head: rises into the cassette while the tape is engaged.
 	local headTop = 420 - self.head * 22
-	lg.setScissor(300, 382, 40, 58)
+	ui.clip(300, 382, 40, 40)
 	lg.setColor(0.72, 0.73, 0.76)
 	lg.rectangle("fill", 306, headTop, 28, 30, 3, 3)
 	lg.setColor(0.45, 0.46, 0.48)
@@ -238,36 +251,32 @@ function Walkman:drawCassette(info)
 	drawScrew(320, 356)
 end
 
+-- Keys stand up from the bottom edge and sink toward the hinge when pressed.
 function Walkman:drawKeys()
-	for i, k in ipairs(KEYS) do
-		local x = KEY_X + (i - 1) * (KEY_W + KEY_GAP)
-		local top = 10 + self.keyDepth[k] * 16
+	for _, k in ipairs(KEYS) do
+		local top = KEY_TOP + self.keyDepth[k.name] * KEY_TRAVEL
 		setColor(C.keySide)
-		lg.rectangle("fill", x, top, KEY_W, 40, 5, 5)
+		lg.rectangle("fill", k.x, top, KEY_W, 60, 6, 6)
 		setColor(C.key)
-		lg.rectangle("fill", x + 2, top, KEY_W - 4, 34, 5, 5)
-		lg.setColor(0, 0, 0, 0.12)
-		for r = 0, 2 do
-			lg.rectangle("fill", x + 10, top + 7 + r * 5, KEY_W - 20, 2)
+		lg.rectangle("fill", k.x + 2, top, KEY_W - 4, 54, 6, 6)
+		setColor(C.keyMark)
+		local cx = k.x + KEY_W / 2
+		if k.name == "stop" then
+			-- STOP/EJECT: pressed again while stopped, it opens the lid.
+			ui.icon("stop", cx - 17, top + 9, 12)
+			ui.icon("eject", cx + 5, top + 9, 12)
+		else
+			ui.icon(k.name, cx - 7, top + 9, 13)
 		end
-	end
-end
-
--- Symbols printed on the body under each key.
-function Walkman:drawKeyMarks()
-	setColor(C.print, 0.8)
-	for i, k in ipairs(KEYS) do
-		local cx = KEY_X + (i - 1) * (KEY_W + KEY_GAP) + KEY_W / 2
-		ui.icon(k, cx - 6, 43, 11)
 	end
 end
 
 function Walkman:drawWheel()
 	local cy = WHEEL.y + WHEEL.h / 2
 	local r = WHEEL.h / 2
-	-- Slot in the body, then the wheel rim with shading for its curve.
-	lg.setColor(0.05, 0.05, 0.06)
-	lg.rectangle("fill", WHEEL.x - 4, WHEEL.y - 4, WHEEL.w + 8, WHEEL.h + 8, 4, 4)
+	-- Rim of the wheel, shaded for its curve.
+	lg.setColor(0.02, 0.02, 0.03)
+	lg.rectangle("fill", WHEEL.x, WHEEL.y - 4, WHEEL.w + 4, WHEEL.h + 8, 4, 4)
 	for y = WHEEL.y, WHEEL.y + WHEEL.h - 1, 2 do
 		local shade = math.cos(math.asin(math.max(-1, math.min(1, (y + 1 - cy) / r))))
 		lg.setColor(0.18 + 0.32 * shade, 0.18 + 0.32 * shade, 0.20 + 0.32 * shade)
@@ -281,67 +290,47 @@ function Walkman:drawWheel()
 		if math.abs(a) < 1.45 then
 			lg.setColor(0, 0, 0, 0.35 * math.cos(a))
 			local y = cy + r * math.sin(a)
-			lg.line(WHEEL.x, y, WHEEL.x + 3, y)
-			lg.line(WHEEL.x + WHEEL.w - 3, y, WHEEL.x + WHEEL.w, y)
+			lg.line(WHEEL.x + WHEEL.w - 4, y, WHEEL.x + WHEEL.w, y)
 		end
 	end
 	-- Numbers on the rim; the one level with the index mark is the volume.
-	lg.setFont(self.fonts.mini)
+	local font = self.fonts.wheel
+	lg.setFont(font)
 	for n = 0, 10 do
 		local a = (n - self.volumeShown * 10) * WHEEL_STEP
 		if math.abs(a) < 1.35 then
 			local s = math.cos(a)
 			lg.setColor(0.95, 0.95, 0.92, s)
-			local h = self.fonts.mini:getHeight()
-			lg.printf(tostring(n), WHEEL.x - 2, cy + r * math.sin(a), WHEEL.w + 4, "center", 0, 1, s, 0, h / 2)
+			lg.printf(tostring(n), WHEEL.x, cy + r * math.sin(a), WHEEL.w - 2, "center", 0, 1, s, 0, font:getHeight() / 2)
 		end
 	end
-	setColor(C.print, 0.8)
-	lg.polygon("fill", WHEEL.x - 12, cy - 4, WHEEL.x - 12, cy + 4, WHEEL.x - 6, cy)
-	lg.setFont(self.fonts.mini)
-	lg.print("VOL", WHEEL.x - 8, WHEEL.y + WHEEL.h + 10, -math.pi / 2)
+	lg.setColor(0.95, 0.95, 0.92, 0.8)
+	lg.polygon("fill", WHEEL.x + WHEEL.w + 10, cy - 5, WHEEL.x + WHEEL.w + 10, cy + 5, WHEEL.x + WHEEL.w + 4, cy)
 end
 
 -- info: { title, subtitle, tapeLength }
 function Walkman:draw(info)
-	lg.setColor(0.04, 0.04, 0.05)
-	lg.rectangle("fill", 0, 0, 640, 480)
+	local W, H = Walkman.WIDTH, Walkman.HEIGHT
+	setColor(C.interior)
+	lg.rectangle("fill", 0, 0, W, H)
 
-	self:drawKeys()
-
-	setColor(C.body)
-	lg.rectangle("fill", BODY.x, BODY.y, BODY.w, BODY.h, 30, 30)
-	lg.setColor(1, 1, 1, 0.025)
-	for y = BODY.y + 4, BODY.y + BODY.h - 4, 3 do
-		lg.line(BODY.x + 10, y, BODY.x + BODY.w - 10, y)
-	end
-	self:drawKeyMarks()
-	self:drawWheel()
-
-	-- Lid with its window.
-	setColor(C.lid)
-	lg.rectangle("fill", LID.x, LID.y, LID.w, LID.h, 20, 20)
-	lg.setColor(0, 0, 0, 0.35)
-	lg.setLineWidth(2)
-	lg.rectangle("line", LID.x, LID.y, LID.w, LID.h, 20, 20)
-	lg.setColor(0.03, 0.03, 0.04)
-	lg.rectangle("fill", GLASS.x, GLASS.y, GLASS.w, GLASS.h, 14, 14)
-	lg.setFont(self.fonts.tiny)
-	setColor(C.print, 0.7)
-	lg.print("STEREO CASSETTE PLAYER", LID.x + 24, LID.y + 6)
-
+	lg.push()
+	lg.translate(CASSETTE_X, CASSETTE_Y)
+	lg.scale(Walkman.CASSETTE_SCALE)
+	lg.translate(-SHELL.x, -SHELL.y)
 	self:drawCassette(info)
+	lg.pop()
 
-	-- Tinted lid glass and its reflections.
+	-- Tinted lid glass over the whole screen, with two reflections.
 	lg.setColor(0.10, 0.13, 0.18, 0.22)
-	lg.rectangle("fill", GLASS.x, GLASS.y, GLASS.w, GLASS.h, 14, 14)
+	lg.rectangle("fill", 0, 0, W, H)
 	lg.setColor(1, 1, 1, 0.05)
-	lg.polygon("fill", GLASS.x + 300, GLASS.y, GLASS.x + 380, GLASS.y, GLASS.x + 200, GLASS.y + GLASS.h, GLASS.x + 120, GLASS.y + GLASS.h)
+	lg.polygon("fill", 430, 0, 530, 0, 300, H, 200, H)
 	lg.setColor(1, 1, 1, 0.03)
-	lg.polygon("fill", GLASS.x + 400, GLASS.y, GLASS.x + 420, GLASS.y, GLASS.x + 240, GLASS.y + GLASS.h, GLASS.x + 220, GLASS.y + GLASS.h)
-	lg.setColor(0, 0, 0, 0.5)
-	lg.setLineWidth(3)
-	lg.rectangle("line", GLASS.x, GLASS.y, GLASS.w, GLASS.h, 14, 14)
+	lg.polygon("fill", 560, 0, 585, 0, 355, H, 330, H)
+
+	self:drawWheel()
+	self:drawKeys()
 end
 
 return Walkman

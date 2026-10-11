@@ -1,5 +1,5 @@
 -- Draws everything at a fixed virtual size and scales it to the screen with
--- letterboxing, so 640x480, 720x720 and 1024x768 screens all work.
+-- letterboxing. The canvas matches the RG34XXSP (720x480); other screens get bars.
 local Scaler = {}
 
 function Scaler.init(width, height)
