@@ -1,18 +1,23 @@
 local Browser = require("lib.browser")
 local BrowserView = require("lib.browser_view")
-local Cassette = require("lib.cassette")
+local Deck = require("lib.deck")
+local Durations = require("lib.durations")
 local Input = require("lib.input")
-local Player = require("lib.player")
 local Scaler = require("lib.scaler")
 local Settings = require("lib.settings")
 local Sfx = require("lib.sfx")
+local Tape = require("lib.tape")
+local Walkman = require("lib.walkman")
 local fs = require("lib.fs")
 local ui = require("lib.ui")
 
 local WIDTH, HEIGHT = 640, 480
 
-local screen = "browser" -- browser | deck
-local fonts, player, browser, cassette
+-- Shoulder buttons in the order the keys sit on the player.
+local KEY_FOR_ACTION = { l1 = "rew", l2 = "stop", r2 = "play", r1 = "ff", a = "play", b = "stop" }
+
+local screen = "library" -- library | deck
+local fonts, deck, browser, walkman
 
 local function loadFonts()
 	-- Drop a TTF at assets/label.ttf for a handwritten-style cassette label.
@@ -26,53 +31,33 @@ local function loadFonts()
 	return {
 		title = labelSized(22),
 		side = labelSized(40),
+		medium = love.graphics.newFont(20),
 		small = love.graphics.newFont(15),
 		tiny = love.graphics.newFont(12),
-		medium = love.graphics.newFont(20),
-		digits = love.graphics.newFont(22),
+		mini = love.graphics.newFont(9),
 	}
 end
 
-local function transport()
-	if player.wind > 0 then
-		return "ff"
-	elseif player.wind < 0 then
-		return "rew"
-	elseif player.state == "playing" then
-		return "play"
-	elseif player.state == "paused" then
-		return "pause"
-	end
-	return "stop"
-end
-
-local function deckInfo()
-	local path = player:currentPath()
-	local title, subtitle = "No tape loaded", "Press B to pick some music"
-	if path then
-		title = ui.safe(fs.stem(fs.basename(path)))
-		subtitle = ui.safe(fs.basename(fs.parent(path)))
-	end
-	return {
-		side = "A",
-		title = title,
-		subtitle = subtitle,
-		transport = transport(),
-		position = player:position(),
-		duration = player:duration(),
-		track = math.max(player.index, 0),
-		tracks = #player.queue,
-		volume = player.volume,
-		hiss = Settings.values.hiss,
-		error = player.error,
-	}
+-- "03 - Song Name.mp3" -> "Song Name"
+local function songTitle(path)
+	local stem = fs.stem(fs.basename(path))
+	local stripped = stem:match("^%d+[%s%.%-_]+(.+)$")
+	return ui.safe(stripped or stem)
 end
 
 local function clunk()
-	Sfx.clunk(0.5 * player.volume)
+	Sfx.clunk(0.5 * deck.volume)
 end
 
-local function browserAction(action, isRepeat)
+local function insertTape(paths, index)
+	local tape = Tape.new(paths)
+	deck:insert(tape, tape.tracks[index].start)
+	Durations.probe(tape)
+	deck:press("play")
+	screen = "deck"
+end
+
+local function libraryAction(action, isRepeat)
 	if action == "up" then
 		browser:move(-1, not isRepeat)
 	elseif action == "down" then
@@ -82,69 +67,46 @@ local function browserAction(action, isRepeat)
 	elseif action == "right" then
 		browser:move(Browser.ROWS, false)
 	elseif action == "a" and not isRepeat then
-		local queue, index = browser:activate()
-		if queue then
-			player:setQueue(queue, index)
-			clunk()
-			screen = "deck"
+		local paths, index = browser:activate()
+		if paths then
+			insertTape(paths, index)
 			Settings.values.lastDir = browser.path or ""
 			Settings.save()
 		end
 	elseif action == "b" then
 		browser:back()
-	elseif action == "y" and #player.queue > 0 then
-		screen = "deck"
 	end
 end
 
-local function deckAction(action, isRepeat)
+local function deckAction(action)
 	if action == "up" or action == "down" then
-		player:setVolume(player.volume + (action == "up" and 0.05 or -0.05))
-		Settings.values.volume = player.volume
+		deck:setVolume(deck.volume + (action == "up" and 0.1 or -0.1))
+		Settings.values.volume = deck.volume
 		Settings.save()
-	elseif isRepeat then
 		return
-	elseif action == "a" then
-		player:toggle()
+	end
+	local key = KEY_FOR_ACTION[action]
+	if key and deck:press(key) == "eject" then
+		deck:eject()
 		clunk()
-	elseif action == "b" then
-		screen = "browser"
-	elseif action == "left" then
-		player:prev()
-		clunk()
-	elseif action == "right" then
-		player:step(1)
-		clunk()
-	elseif action == "l1" then
-		player:startWind(-1)
-		clunk()
-	elseif action == "r1" then
-		player:startWind(1)
-		clunk()
-	elseif action == "x" then
-		Settings.values.hiss = not Settings.values.hiss
-		Settings.save()
-	elseif action == "y" then
-		Settings.values.theme = cassette:setTheme(cassette.themeIndex + 1)
-		Settings.save()
+		screen = "library"
 	end
 end
 
 local function onAction(action, isRepeat)
 	if action == "quit" then
 		love.event.quit()
-	elseif screen == "browser" then
-		browserAction(action, isRepeat)
-	else
-		deckAction(action, isRepeat)
+	elseif screen == "library" then
+		libraryAction(action, isRepeat)
+	elseif not isRepeat or action == "up" or action == "down" then
+		deckAction(action)
 	end
 end
 
 local function onRelease(action)
-	if action == "l1" then
-		player:stopWind(-1)
-	elseif action == "r1" then
-		player:stopWind(1)
+	local key = KEY_FOR_ACTION[action]
+	if screen == "deck" and key then
+		deck:release(key)
 	end
 end
 
@@ -154,12 +116,11 @@ function love.load()
 	Scaler.init(WIDTH, HEIGHT)
 	fonts = loadFonts()
 	Sfx.init()
+	Durations.init()
 
-	player = Player.new()
-	player:setVolume(Settings.values.volume)
-
-	cassette = Cassette.new(fonts)
-	cassette:setTheme(Settings.values.theme)
+	deck = Deck.new({ onClunk = clunk })
+	deck:setVolume(Settings.values.volume)
+	walkman = Walkman.new(fonts)
 
 	browser = Browser.new(fs.musicRoots())
 	local last = Settings.values.lastDir
@@ -175,17 +136,31 @@ end
 
 function love.update(dt)
 	Input.update(dt)
-	player:update(dt)
-	cassette:update(dt, player:tapeSpeed(), player:progress())
-	Sfx.update(player, Settings.values.hiss)
+	Durations.update(deck.tape)
+	deck:update(dt)
+	local keys = deck:keysDown()
+	keys.stop = Input.isDown("l2") or Input.isDown("b")
+	walkman:update(dt, {
+		speed = deck:tapeSpeed(),
+		progress = deck:progress(),
+		volume = deck.volume,
+		keys = keys,
+		headEngaged = keys.play,
+	})
+	Sfx.update(deck)
 end
 
 function love.draw()
 	Scaler.begin()
 	if screen == "deck" then
-		cassette:draw(deckInfo())
+		local track = deck:currentTrack()
+		walkman:draw({
+			title = track and songTitle(track.path) or "",
+			subtitle = track and ui.safe(fs.basename(fs.parent(track.path))) or "",
+			tapeLength = deck.tape and deck.tape.length,
+		})
 	else
-		BrowserView.draw(browser, fonts, cassette:theme(), player:currentPath(), player.state == "playing")
+		BrowserView.draw(browser, fonts)
 	end
 	Scaler.finish()
 end
@@ -206,4 +181,8 @@ end
 
 function love.gamepadreleased(_, button)
 	Input.gamepadreleased(button)
+end
+
+function love.gamepadaxis(_, axis, value)
+	Input.gamepadaxis(axis, value)
 end

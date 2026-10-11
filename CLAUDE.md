@@ -3,9 +3,13 @@
 A cassette-style music player for muOS handhelds, written in Lua for LÖVE 11.x.
 See README.md for features, controls and layout.
 
+Design rule: the deck screen shows only a physical player. State is shown by
+parts of the player (latched keys, reels, tape packs, head, volume wheel, the
+cassette label), never by icons, text readouts or overlays.
+
 ## Commands
 
-- `luajit tests/run.lua`: headless tests (LÖVE APIs are stubbed). Run after any change to `fs`, `browser` or `player`.
+- `luajit tests/run.lua`: headless tests (LÖVE APIs are stubbed). Run after any change to `fs`, `browser`, `tape` or `deck`.
 - `scripts/screenshots.sh`: runs the real app under xvfb with scripted input and writes PNGs to `~/.local/share/love/rc-harness/`. Look at them after any drawing change.
 - `scripts/package.sh <version>`: builds `dist/RetroCassette-<version>.muxapp`.
 - Syntax check: `for f in $(find RetroCassette tests tools -name '*.lua'); do luajit -bl "$f" >/dev/null; done`

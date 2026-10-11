@@ -2,8 +2,6 @@
 local Settings = {
 	values = {
 		volume = 0.8,
-		hiss = true,
-		theme = 1,
 		lastDir = "",
 	},
 }
@@ -17,10 +15,8 @@ function Settings.load()
 	end
 	local v = Settings.values
 	for key, value in contents:gmatch("([%w_]+)=([^\n]*)") do
-		if key == "volume" or key == "theme" then
-			v[key] = tonumber(value) or v[key]
-		elseif key == "hiss" then
-			v.hiss = value == "true"
+		if key == "volume" then
+			v.volume = tonumber(value) or v.volume
 		elseif key == "lastDir" then
 			v.lastDir = value
 		end
@@ -29,14 +25,7 @@ end
 
 function Settings.save()
 	local v = Settings.values
-	local out = string.format(
-		"volume=%.2f\nhiss=%s\ntheme=%d\nlastDir=%s\n",
-		v.volume,
-		tostring(v.hiss),
-		v.theme,
-		v.lastDir
-	)
-	love.filesystem.write(FILE, out)
+	love.filesystem.write(FILE, string.format("volume=%.2f\nlastDir=%s\n", v.volume, v.lastDir))
 end
 
 return Settings

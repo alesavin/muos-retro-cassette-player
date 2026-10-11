@@ -11,10 +11,10 @@ local KEYMAP = {
 	["return"] = "a",
 	x = "b",
 	backspace = "b",
-	c = "x",
-	v = "y",
 	a = "l1",
-	s = "r1",
+	s = "l2",
+	d = "r2",
+	f = "r1",
 	tab = "select",
 	space = "start",
 	escape = "quit",
@@ -27,8 +27,6 @@ local PADMAP = {
 	dpright = "right",
 	a = "a",
 	b = "b",
-	x = "x",
-	y = "y",
 	leftshoulder = "l1",
 	rightshoulder = "r1",
 	back = "select",
@@ -86,6 +84,21 @@ end
 
 function Input.gamepadreleased(button)
 	release(PADMAP[button])
+end
+
+-- L2/R2 are analog triggers on most controllers.
+local TRIGGERS = { triggerleft = "l2", triggerright = "r2" }
+
+function Input.gamepadaxis(axis, value)
+	local action = TRIGGERS[axis]
+	if not action then
+		return
+	end
+	if value > 0.5 then
+		press(action)
+	elseif value < 0.3 then
+		release(action)
+	end
 end
 
 function Input.update(dt)

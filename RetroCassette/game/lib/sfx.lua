@@ -43,14 +43,14 @@ function Sfx.clunk(volume)
 	Sfx.clunkSource:play()
 end
 
-function Sfx.update(player, hissEnabled)
+function Sfx.update(deck)
 	local vol, pitch = 0, 1
-	if player.wind ~= 0 then
+	if deck:winding() then
 		vol, pitch = 0.18, 1.8
-	elseif hissEnabled and player.state == "playing" then
-		vol = 0.035
+	elseif deck.mode == "play" then
+		vol, pitch = 0.035, deck.hold == 1 and 2 or 1
 	end
-	vol = vol * player.volume
+	vol = vol * deck.volume
 	if vol > 0 then
 		Sfx.hiss:setVolume(vol)
 		Sfx.hiss:setPitch(pitch)

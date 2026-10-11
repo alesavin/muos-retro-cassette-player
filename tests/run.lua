@@ -2,34 +2,26 @@
 -- Run from the repo root: luajit tests/run.lua
 package.path = "RetroCassette/game/?.lua;" .. package.path
 
--- Minimal stand-ins for the LÖVE APIs the player touches.
+-- Minimal stand-in for a LÖVE audio source.
 local function fakeSource(duration)
-	local s = { pos = 0, playing = false, duration = duration, volume = 1 }
+	local s = { pos = 0, playing = false, duration = duration, pitch = 1 }
 	function s:play() self.playing = true end
 	function s:pause() self.playing = false end
-	function s:stop() self.playing = false; self.pos = 0 end
+	function s:stop() self.playing = false end
 	function s:release() end
 	function s:isPlaying() return self.playing end
 	function s:tell() return self.pos end
 	function s:seek(t) self.pos = t end
 	function s:getDuration() return self.duration end
-	function s:setVolume(v) self.volume = v end
+	function s:setVolume() end
+	function s:setPitch(p) self.pitch = p end
 	return s
 end
 
-love = {
-	filesystem = {
-		newFileData = function(data, name)
-			if name:match("^bad") then error("decode failed") end
-			return { release = function() end }
-		end,
-	},
-	audio = { newSource = function() return fakeSource(100) end },
-}
-
 local fs = require("lib.fs")
 local Browser = require("lib.browser")
-local Player = require("lib.player")
+local Deck = require("lib.deck")
+local Tape = require("lib.tape")
 
 local failures, count = 0, 0
 local function check(name, cond)
@@ -78,32 +70,93 @@ check("back selects folder", b.path == tmp and b.entries[b.sel].name == "Albums"
 b:back()
 check("back at root stays", b.path == tmp)
 
--- Player: skipping, end of side, winding
-local p = Player.new()
-p:setQueue(queue, 2)
-check("plays selected", p.index == 2 and p.state == "playing")
-p:step(1)
-check("skips undecodable file", p.index == 4 and p.state == "playing")
-p.source.playing = false
-p:update(0.1)
-check("end of side rewinds and stops", p.index == 1 and p.state == "stopped")
-p:play()
-p.source.pos = 10
-p:startWind(1)
-check("wind pauses audio", not p.source.playing and p.wind == 1)
-p:update(1)
-check("wind advances position", math.abs(p:position() - (10 + Player.WIND_SPEED)) < 1e-6)
-p:stopWind(1)
-check("wind resumes playback", p.source.playing and p.state == "playing" and p.source.pos == 10 + Player.WIND_SPEED)
-p:startWind(-1)
-p:update(60)
-check("rewind clamps at 0", p:position() == 0)
-p:stopWind(-1)
-p.source.pos = 5
-p:prev()
-check("prev restarts track", p.index == 1 and p.source.pos == 0)
-p:setVolume(2)
-check("volume clamps", p.volume == 1)
+-- Tape timeline
+local tape = Tape.new({ "a", "b", "c" })
+check("estimated layout", tape.length == 3 * Tape.DEFAULT_DURATION + 2 * Tape.GAP)
+tape:setDuration(1, 100)
+tape:setDuration(2, 50)
+check("unknown track uses average", tape.tracks[3].length == 75)
+check("starts include gaps", tape.tracks[2].start == 104 and tape.tracks[3].start == 158)
+local i, off, blank = tape:locate(120)
+check("locate in song", i == 2 and off == 16 and not blank)
+i, off, blank = tape:locate(102)
+check("locate in gap", i == 2 and blank)
+check("next start", tape:nextStart(10) == 104 and tape:nextStart(160) == nil)
+check("prev start: restart song", tape:prevStart(120) == 104)
+check("prev start: previous song", tape:prevStart(105) == 0)
+
+-- Deck transport. Sources are fakes keyed by path; "bad" can't be opened.
+local sources = {}
+local function newDeck()
+	sources = {}
+	return Deck.new({
+		open = function(path)
+			if path == "bad" then return nil end
+			sources[path] = fakeSource(path == "a" and 100 or 50)
+			return sources[path], { release = function() end }
+		end,
+	})
+end
+local d = newDeck()
+d:insert(Tape.new({ "a", "b" }), 0)
+d:press("play")
+d:update(0.01)
+check("play starts the first song", d.mode == "play" and sources.a.playing)
+sources.a.pos = 40
+d:update(0.01)
+check("tape follows the song", d.t == 40)
+
+d:press("stop")
+check("stop silences, keeps position", d.mode == "stop" and not sources.a.playing and d.t == 40)
+check("stop again ejects", d:press("stop") == "eject")
+d:press("ff")
+check("ff latches while stopped", d.mode == "ff")
+d:update(1)
+check("ff winds", d.t > 40 and not sources.a.playing)
+d:press("play")
+d:update(0.01)
+check("play from wound position", sources.a.playing and math.abs(sources.a.pos - d.t) < 1e-6)
+
+-- AMS: tap FF while playing winds to the next song, then plays it.
+d:press("ff")
+d:update(0.1)
+check("held ff cues at higher pitch", sources.a.pitch == Deck.CUE_RATE and d:keysDown().ff)
+d:release("ff")
+check("tap ff starts music sensor", d.mode == "ams" and d.amsTarget == d.tape.tracks[2].start)
+for _ = 1, 100 do d:update(0.1) end
+check("ams lands on next song and plays", d.mode == "play" and d.srcIndex == 2 and sources.b.playing)
+
+-- Tap REW early in a song goes back to the previous song.
+sources.b.pos = 1
+d:update(0.01)
+d:press("rew")
+check("held rew reviews muted", not sources.b.playing and d:keysDown().rew)
+d:release("rew")
+check("tap rew goes to previous song", d.mode == "ams" and d.amsTarget == 0)
+
+-- End of a song runs into the gap, then the next song; end of tape stops.
+d = newDeck()
+d:insert(Tape.new({ "a", "b" }), 0)
+d:press("play")
+d:update(0.01)
+sources.a.playing = false
+d:update(0.01)
+check("song end enters gap", d.mode == "play" and select(3, d.tape:locate(d.t)))
+for _ = 1, 50 do d:update(0.1) end
+check("gap leads to next song", sources.b and sources.b.playing)
+sources.b.playing = false
+for _ = 1, 3 do d:update(0.1) end
+check("end of tape stops and pops PLAY", d.mode == "stop" and d.t == d.tape.length and not d:keysDown().play)
+
+-- Unreadable files are skipped as blank tape.
+d = newDeck()
+d:insert(Tape.new({ "bad", "b" }), 0)
+d:press("play")
+for _ = 1, 200 do d:update(0.1) end
+check("unreadable file skipped", sources.b and sources.b.playing)
+
+d:setVolume(2)
+check("volume clamps", d.volume == 1)
 
 sh("rm -rf '" .. tmp .. "'")
 print(string.format("%d/%d checks passed", count - failures, count))

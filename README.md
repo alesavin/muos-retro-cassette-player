@@ -1,43 +1,47 @@
 # Retro Cassette
 
-A music player for [muOS](https://muos.dev) handhelds that looks like a cassette
-tape. The reels spin while a track plays. Tape moves from the left reel to the
-right one as the track goes on, and the nearly empty reel spins faster, like a
-real cassette.
+A music player for [muOS](https://muos.dev) handhelds that shows a cassette
+inside a closed portable player. There are no on-screen icons or readouts. You
+can tell what the player is doing the way you would with a real one: from the
+keys that are pressed down, the turning reels, how much tape is on each reel
+and the play head against the tape.
 
 ![Deck](docs/deck.png)
 
-| Library | Neon shell |
-| --- | --- |
-| ![Library](docs/library.png) | ![Neon](docs/deck-neon.png) |
-
 Built with [LÖVE](https://love2d.org) 11.x (Lua).
 
-## Features
+## How it works
 
-- Folder browser over your music folders (MP3, OGG, FLAC, WAV)
-- Plays the rest of the folder after the selected track
-- Cassette deck with spinning reels, tape packs that follow progress, a tape counter and a volume meter
-- Hold L/R to wind: the audio cuts out, the reels race and you hear the tape whir
-- Optional tape hiss and a button "clunk" (both generated, no audio assets)
-- Four shell styles: Classic, Chrome, Beach, Neon
-- Remembers volume, hiss, shell style and the last folder
-- Draws at 640×480 and scales with letterboxing, so 720×720 and 1024×768 screens work too
+- **A folder is one side of a tape.** Its songs are recorded one after another
+  with a few seconds of blank tape between them. The reels show how far you are
+  through the whole album, and the minute marks on the cassette window show the
+  time: read it where the edge of the right-hand tape pack sits.
+- **The label** shows the song under the head and the folder (album or artist) name.
+- **The volume wheel** on the right side rolls to the current level, 0–10.
+- **The keys stay down** like real ones. PLAY stays down while playing, and FF or
+  REW stays down while winding. They pop up with a clunk at the end of the tape.
+
+MP3, OGG, FLAC and WAV are supported.
 
 ## Controls
 
-| Button | Library | Cassette deck |
-| --- | --- | --- |
-| D-pad up/down | Move | Volume |
-| D-pad left/right | Page up/down | Previous/next track |
-| A | Open folder / play track | Play/pause |
-| B | Parent folder | Back to library (music keeps playing) |
-| X | | Tape hiss on/off |
-| Y | Go to the deck | Next shell style |
-| L1 / R1 (hold) | | Rewind / fast-forward |
-| Select + Start, or Menu | Quit | Quit |
+The four keys on top of the player are the shoulder buttons, in the same order:
 
-On a desktop: arrows, Z = A, X = B, C = X, V = Y, A/S = L1/R1, Tab = Select,
+| Button | Key | Stopped | Playing |
+| --- | --- | --- | --- |
+| L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted |
+| L2 | STOP | Opens the lid and goes back to the library | Stops; the tape stays where it is, so this is also pause |
+| R2 | PLAY | Plays | |
+| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
+
+A works as PLAY and B as STOP. D-pad up and down turn the volume wheel.
+
+In the library: D-pad to move (left and right page), A to open a folder or to
+put the tape in at the chosen song, B to go up a folder.
+
+Select + Start or the Menu button quits.
+
+On a desktop: arrows, Z = A, X = B, A/S/D/F = L1/L2/R2/R1, Tab = Select,
 Space = Start, Esc = quit.
 
 ## Where to put music
@@ -66,8 +70,8 @@ in `RetroCassette/data/`.
 
 > **Not yet tested on hardware.** The launcher, archive layout and button
 > mapping follow what other muOS LÖVE apps do, but they still need to be checked on
-> a real device. A/B can come out swapped depending on the device's controller
-> mapping.
+> a real device. L2/R2 are read as analog triggers, and A/B can come out swapped
+> depending on the device's controller mapping.
 
 ## Develop on a desktop
 
@@ -78,7 +82,7 @@ RC_MUSIC_DIR=~/Music love RetroCassette/game
 Checks:
 
 ```sh
-luajit tests/run.lua       # file listing, browser and player logic, LÖVE stubbed out
+luajit tests/run.lua       # file listing, browser, tape timeline and transport logic, LÖVE stubbed out
 scripts/screenshots.sh     # runs the real app headless and saves screenshots (needs love, xvfb-run, python3)
 ```
 
@@ -89,14 +93,16 @@ RetroCassette/            what gets installed on the device
   mux_launch.sh           muOS launcher (HELP / ICON / GRID headers)
   game/                   LÖVE project
     main.lua              screens and button handling
-    lib/cassette.lua      cassette and deck drawing
-    lib/player.lua        playback queue, winding
+    lib/walkman.lua       draws the player: lid, cassette, keys, volume wheel
+    lib/deck.lua          transport: latching keys, cue/review, music sensor, audio
+    lib/tape.lua          tape timeline: songs and gaps on one side
+    lib/durations.lua     reads song lengths on a background thread
     lib/browser.lua       folder navigation
     lib/browser_view.lua  library screen drawing
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
-    lib/sfx.lua           generated hiss and clunk
-    lib/settings.lua      settings file
+    lib/sfx.lua           generated hiss, winding whir and key clunk
+    lib/settings.lua      settings file (volume, last folder)
     lib/scaler.lua        640x480 canvas scaled to the screen
 scripts/                  package.sh, screenshots.sh
 tests/run.lua             headless tests
@@ -105,7 +111,7 @@ tools/                    screenshot harness and test music generator
 
 ## Ideas for later
 
-- Read ID3/Vorbis tags and cover art for the label
-- Playlists, shuffle, resume where you left off
+- Read ID3/Vorbis tags for the label
+- Remember where each tape was stopped, like a real cassette does
 - A screen-off mode to save battery while listening
 - Side B: flip the tape to play the folder in reverse

@@ -1,0 +1,294 @@
+-- The tape transport: latching REW / STOP / PLAY / FF keys like a real
+-- portable player, with cue/review and an automatic music sensor (AMS).
+--
+--   stopped      FF/REW tap latches and winds until STOP or the end of the tape
+--   playing      FF held = cue (fast, high-pitched audio), REW held = review (muted)
+--                FF/REW tapped = wind to the next song / back to this or the previous song
+--   STOP         releases every key; pressed again while stopped, opens the lid
+local fs = require("lib.fs")
+
+local Deck = {}
+Deck.__index = Deck
+
+Deck.CUE_RATE = 3
+Deck.REVIEW_RATE = 4
+Deck.TAP_TIME = 0.3
+
+local function openSource(path)
+	local data = fs.readAll(path)
+	if not data then
+		return nil
+	end
+	local ok, fd, src = pcall(function()
+		-- The stream reads from this FileData, so it has to stay alive with the source.
+		local fd = love.filesystem.newFileData(data, fs.basename(path))
+		return fd, love.audio.newSource(fd, "stream")
+	end)
+	if not ok then
+		return nil
+	end
+	return src, fd
+end
+
+function Deck.new(opts)
+	opts = opts or {}
+	local self = setmetatable({}, Deck)
+	self.open = opts.open or openSource
+	self.onClunk = opts.onClunk or function() end
+	self.tape = nil
+	self.t = 0 -- position on the tape, in seconds
+	self.mode = "stop" -- stop | play | ff | rew | ams
+	self.hold = nil -- while playing: 1 = cue, -1 = review
+	self.volume = 0.8
+	self.clock = 0
+	self.source, self.fileData, self.srcIndex, self.started = nil, nil, nil, false
+	return self
+end
+
+function Deck:unloadSource()
+	if self.source then
+		self.source:stop()
+		self.source:release()
+	end
+	if self.fileData then
+		self.fileData:release()
+	end
+	self.source, self.fileData, self.srcIndex, self.started = nil, nil, nil, false
+end
+
+-- Stops the sound but keeps the tape where it is.
+function Deck:silence()
+	if self.source then
+		self.source:pause()
+	end
+	self.started = false
+end
+
+function Deck:insert(tape, t)
+	self:eject()
+	self.tape = tape
+	self.t = t or 0
+end
+
+function Deck:eject()
+	self:unloadSource()
+	self.tape = nil
+	self.t = 0
+	self.mode = "stop"
+	self.hold = nil
+end
+
+-- Tape seconds per second while winding: a whole side takes at most about 30 seconds.
+function Deck:windRate()
+	return math.max(30, self.tape.length / 30)
+end
+
+function Deck:autoStop()
+	self:silence()
+	self.mode = "stop"
+	self.hold = nil
+	self.onClunk()
+end
+
+-- key: "rew" | "stop" | "play" | "ff". Returns "eject" when STOP is pressed while stopped.
+function Deck:press(key)
+	if not self.tape then
+		return nil
+	end
+	if key == "play" then
+		if self.mode == "play" or self.mode == "ams" or self.t >= self.tape.length then
+			return nil
+		end
+		self:silence()
+		self.mode = "play"
+		self.hold = nil
+	elseif key == "stop" then
+		if self.mode == "stop" then
+			return "eject"
+		end
+		self:silence()
+		self.mode = "stop"
+		self.hold = nil
+	elseif key == "ff" or key == "rew" then
+		local dir = key == "ff" and 1 or -1
+		if self.mode == "play" then
+			if self.hold then
+				return nil
+			end
+			self.hold, self.holdStart, self.holdT = dir, self.clock, self.t
+			if dir < 0 then
+				self:silence()
+			end
+		elseif self.mode ~= "ams" then
+			self:silence()
+			self.mode = key
+		end
+	end
+	self.onClunk()
+	return nil
+end
+
+function Deck:release(key)
+	local dir = (key == "ff" and 1) or (key == "rew" and -1) or nil
+	if not self.tape or self.mode ~= "play" or self.hold ~= dir or dir == nil then
+		return
+	end
+	self.hold = nil
+	if self.clock - self.holdStart >= Deck.TAP_TIME then
+		-- End of cue/review: play carries on from here (review already silenced the
+		-- source, so the next update seeks to the new position).
+		return
+	end
+	local target
+	if dir > 0 then
+		target = self.tape:nextStart(self.holdT)
+	else
+		target = self.tape:prevStart(self.holdT)
+	end
+	self:silence()
+	if target then
+		self.mode = "ams"
+		self.amsTarget = target
+		self.amsDir = target >= self.t and 1 or -1
+	else
+		-- No song after this one: wind on to the end of the tape.
+		self.mode = "ff"
+	end
+end
+
+function Deck:loadSource(i)
+	self:unloadSource()
+	local tr = self.tape.tracks[i]
+	if tr.bad then
+		return false
+	end
+	local src, fd = self.open(tr.path)
+	if not src then
+		self.tape:markBad(i)
+		return false
+	end
+	self.source, self.fileData, self.srcIndex, self.started = src, fd, i, false
+	local d = src:getDuration()
+	if d and d > 0 then
+		self.tape:setDuration(i, d)
+	end
+	return true
+end
+
+function Deck:updatePlay(dt)
+	local tape = self.tape
+	if self.hold == -1 then
+		self.t = math.max(0, self.t - Deck.REVIEW_RATE * dt)
+		return
+	end
+	local rate = self.hold == 1 and Deck.CUE_RATE or 1
+	local i, offset, blank = tape:locate(self.t)
+	if not blank and self.srcIndex ~= i then
+		if not self:loadSource(i) then
+			return -- the track now has no length; the next update moves past it
+		end
+		i, offset, blank = tape:locate(self.t)
+	end
+	if blank then
+		self.t = self.t + rate * dt
+	elseif not self.started then
+		self.source:seek(offset)
+		self.source:play()
+		self.started = true
+	elseif self.source:isPlaying() then
+		self.t = tape.tracks[i].start + self.source:tell()
+	else
+		-- The recording ended: run on into the gap.
+		self.t = tape.tracks[i].start + tape.tracks[i].length + 0.001
+		self.started = false
+	end
+	if self.source then
+		self.source:setPitch(rate)
+		self.source:setVolume(self.volume)
+	end
+	if self.t >= tape.length then
+		self.t = tape.length
+		self:autoStop()
+	end
+end
+
+function Deck:update(dt)
+	self.clock = self.clock + dt
+	if not self.tape then
+		return
+	end
+	if self.mode == "ff" or self.mode == "rew" then
+		local dir = self.mode == "ff" and 1 or -1
+		self.t = self.t + dir * self:windRate() * dt
+		if self.t >= self.tape.length or self.t <= 0 then
+			self.t = math.max(0, math.min(self.tape.length, self.t))
+			self:autoStop()
+		end
+	elseif self.mode == "ams" then
+		self.t = self.t + self.amsDir * self:windRate() * dt
+		if (self.t - self.amsTarget) * self.amsDir >= 0 then
+			self.t = self.amsTarget
+			self.mode = "play"
+		end
+	elseif self.mode == "play" then
+		self:updatePlay(dt)
+	end
+end
+
+function Deck:setVolume(v)
+	self.volume = math.min(1, math.max(0, v))
+	if self.source then
+		self.source:setVolume(self.volume)
+	end
+end
+
+function Deck:progress()
+	if not self.tape or self.tape.length <= 0 then
+		return 0
+	end
+	return math.min(1, math.max(0, self.t / self.tape.length))
+end
+
+function Deck:winding()
+	return self.mode == "ff" or self.mode == "rew" or self.mode == "ams" or self.hold == -1
+end
+
+-- Reel speed relative to normal play; negative runs the tape backwards.
+function Deck:tapeSpeed()
+	if self.mode == "ff" then
+		return 6
+	elseif self.mode == "rew" then
+		return -6
+	elseif self.mode == "ams" then
+		return 6 * self.amsDir
+	elseif self.mode == "play" then
+		if self.hold == 1 then
+			return Deck.CUE_RATE
+		elseif self.hold == -1 then
+			return -Deck.REVIEW_RATE
+		end
+		return 1
+	end
+	return 0
+end
+
+-- Which keys are latched down (STOP is only down while held, so the caller adds it).
+function Deck:keysDown()
+	local ams = self.mode == "ams"
+	return {
+		rew = self.mode == "rew" or self.hold == -1 or (ams and self.amsDir < 0),
+		play = self.mode == "play" or ams,
+		ff = self.mode == "ff" or self.hold == 1 or (ams and self.amsDir > 0),
+	}
+end
+
+-- Title of the song under the head (or the next one while on blank tape).
+function Deck:currentTrack()
+	if not self.tape then
+		return nil
+	end
+	local i = self.tape:locate(self.t)
+	return self.tape.tracks[i]
+end
+
+return Deck

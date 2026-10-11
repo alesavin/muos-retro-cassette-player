@@ -4,7 +4,7 @@ local fs = require("lib.fs")
 local Browser = {}
 Browser.__index = Browser
 
-Browser.ROWS = 14
+Browser.ROWS = 16
 
 function Browser.new(roots)
 	local self = setmetatable({}, Browser)
