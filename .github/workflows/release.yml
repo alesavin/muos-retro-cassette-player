@@ -1,0 +1,32 @@
+# Builds the .muxapp and attaches it to a GitHub release when a v* tag is pushed.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q luajit
+          luajit tests/run.lua
+
+      - name: Build package
+        run: scripts/package.sh "${GITHUB_REF_NAME#v}"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.muxapp
+          body: |
+            Install: copy the `.muxapp` to your device and install it with muOS's Archive Manager,
+            or unzip it and copy the `RetroCassette` folder to `/mnt/mmc/MUOS/application/`.
+            The app needs a LÖVE runtime; see the README.

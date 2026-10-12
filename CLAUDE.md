@@ -18,7 +18,7 @@ cassette label), never by icons, text readouts or overlays.
 
 - Code must run on LuaJIT (Lua 5.1): no `//`, bitwise operators or other Lua 5.3+ features.
 - Tabs for indentation.
-- All drawing happens on the 640x480 canvas from `lib/scaler.lua`; use canvas coordinates, never the window size.
+- All drawing happens on the 720x480 canvas from `lib/scaler.lua` (the RG34XXSP screen); use canvas coordinates, never the window size.
 - `love.filesystem` can't see the SD cards. Use `lib/fs.lua` (shell `find`, `io.open`) for music; any new shell command there must quote paths with its `quote` helper.
 - Pass file names through `ui.safe` before printing; they may not be valid UTF-8.
 - Keyboard and gamepad buttons map to the same action names in `lib/input.lua`; screens only handle actions.

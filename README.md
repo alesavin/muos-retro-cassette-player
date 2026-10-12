@@ -61,7 +61,7 @@ Set `RC_MUSIC_DIR` to use a different folder.
 
 ## Install on a device
 
-1. Build the package: `scripts/package.sh 0.1.0`. It writes `dist/RetroCassette-0.1.0.muxapp`.
+1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh 0.1.0` (writes `dist/RetroCassette-0.1.0.muxapp`). Pushing a `v*` tag builds a release automatically.
 2. Copy the `.muxapp` to the device's archive folder and install it from muOS's
    Archive Manager. Or copy the `RetroCassette` folder to
    `/mnt/mmc/MUOS/application/` yourself.
