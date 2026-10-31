@@ -98,7 +98,7 @@ Set `RC_MUSIC_DIR` to use a different folder.
 
 Made for muOS 2606 (Andromeda).
 
-1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh <version>`.
+1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-cassette-player/releases) page, or build it with `scripts/package.sh <version>`.
 2. Copy the `.muxapp` to the `ARCHIVE` folder at the top of the SD card
    (`SD1/ARCHIVE/`) and install it with Applications → Archive Manager.
 3. Start **Retro Cassette Player** from the Applications menu.
