@@ -9,9 +9,14 @@ can tell what the player is doing the way you would with a real one: from the
 keys that are pressed down, the turning reels, how much tape is on each reel
 and the play head against the tape.
 
-| Library | Player |
+| The box of tapes | Inside an album |
 | --- | --- |
-| ![Library](docs/library.png) | ![Deck](docs/deck.png) |
+| ![Library: albums as a stack of cassettes, the selected one slid out](docs/library.png) | ![An album's songs as tapes in the album's style](docs/album.png) |
+| **Playing Midnight Synth** | **Playing a song from Coastal Drive** |
+| ![A mint cassette with orange and red stripes playing in the player](docs/deck.png) | ![A chrome cassette with a felt-marker label playing in the player](docs/deck-2.png) |
+
+Each tape's shell, label paper, stripes, handwriting and ink come from its
+album's name, and the cassette in the player matches its spine in the box.
 
 Built with [LÖVE](https://love2d.org) 11.x (Lua).
 
