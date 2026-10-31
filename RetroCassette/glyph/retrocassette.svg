@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+ <!-- Cassette: shell with a label window, two reels and the head opening cut out. -->
+ <path fill-rule="evenodd" d="M56 104h400a32 32 0 0 1 32 32v240a32 32 0 0 1-32 32H56a32 32 0 0 1-32-32V136a32 32 0 0 1 32-32z M88 144v136h336V144z M150 340l-18 46h248l-18-46z"/>
+ <path fill-rule="evenodd" d="M108 164h296v96H108z M176 212m-34 0a34 34 0 1 0 68 0a34 34 0 1 0-68 0z M336 212m-34 0a34 34 0 1 0 68 0a34 34 0 1 0-68 0z M232 196h48v32h-48z"/>
+ <path d="M176 212m-14 0a14 14 0 1 0 28 0a14 14 0 1 0-28 0z M336 212m-14 0a14 14 0 1 0 28 0a14 14 0 1 0-28 0z"/>
+</svg>
