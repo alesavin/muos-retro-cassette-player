@@ -101,7 +101,8 @@ fs.SLOTS = {
 	{ label = "USB", default = "/mnt/usb" },
 }
 
--- "SD1 · MUSIC" for a folder on the first card, and so on; other paths as given.
+-- "SD1 · MUSIC" for a folder on the first card, and so on; a folder anywhere
+-- else is just its own name.
 function fs.rootLabel(path)
 	for _, slot in ipairs(fs.SLOTS) do
 		local mount = slot.env and os.getenv(slot.env)
@@ -112,7 +113,7 @@ function fs.rootLabel(path)
 			return slot.label .. " · " .. fs.basename(path)
 		end
 	end
-	return path
+	return fs.basename(path)
 end
 
 -- The MUSIC folder of each mount, without duplicates, in order.
