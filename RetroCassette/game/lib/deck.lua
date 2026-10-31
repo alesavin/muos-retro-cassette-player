@@ -6,6 +6,7 @@
 --                FF/REW tapped = wind to the next song / back to this or the previous song
 --   PLAY         while playing, pauses (the key stays half-way down); again resumes
 --   STOP         releases every key; pressed again while stopped, opens the lid
+--   skip         (D-pad) jumps straight to the previous / next song
 local fs = require("lib.fs")
 
 local Deck = {}
@@ -14,6 +15,8 @@ Deck.__index = Deck
 Deck.CUE_RATE = 3
 Deck.REVIEW_RATE = 4
 Deck.TAP_TIME = 0.3
+-- How long the reels whir after a skip.
+Deck.SKIP_TIME = 0.35
 
 local function openSource(path)
 	local data = fs.readAll(path)
@@ -152,6 +155,29 @@ function Deck:press(key)
 	return nil
 end
 
+-- Jumps straight to the start of the next song (dir 1), or of this one / the
+-- previous one (dir -1), keeping play, pause or stop as they were. Returns
+-- false when there is nowhere to go or the tape is winding.
+function Deck:skip(dir)
+	if not self.tape or self.hold or not (self.mode == "play" or self.mode == "pause" or self.mode == "stop") then
+		return false
+	end
+	local target
+	if dir > 0 then
+		target = self.tape:nextStart(self.t)
+	else
+		target = self.tape:prevStart(self.t)
+	end
+	if not target then
+		return false
+	end
+	self:silence()
+	self.t = target
+	self:remember()
+	self.skipTime, self.skipDir = Deck.SKIP_TIME, dir
+	return true
+end
+
 function Deck:release(key)
 	local dir = (key == "ff" and 1) or (key == "rew" and -1) or nil
 	if not self.tape or self.mode ~= "play" or self.hold ~= dir or dir == nil then
@@ -239,6 +265,12 @@ end
 
 function Deck:update(dt)
 	self.clock = self.clock + dt
+	if self.skipTime then
+		self.skipTime = self.skipTime - dt
+		if self.skipTime <= 0 then
+			self.skipTime = nil
+		end
+	end
 	if not self.tape then
 		return
 	end
@@ -279,12 +311,14 @@ function Deck:progress()
 end
 
 function Deck:winding()
-	return self.mode == "ff" or self.mode == "rew" or self.mode == "ams" or self.hold == -1
+	return self.mode == "ff" or self.mode == "rew" or self.mode == "ams" or self.hold == -1 or self.skipTime ~= nil
 end
 
 -- Reel speed relative to normal play; negative runs the tape backwards.
 function Deck:tapeSpeed()
-	if self.mode == "ff" then
+	if self.skipTime then
+		return 6 * self.skipDir
+	elseif self.mode == "ff" then
 		return 6
 	elseif self.mode == "rew" then
 		return -6

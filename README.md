@@ -53,17 +53,20 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
 
-A works as PLAY and B as STOP.
+A works as PLAY and B as STOP. D-pad left / right jumps straight to the
+previous / next song (with a short whir of the reels), while L1 / R1 stay
+real REW / FF.
 
-The library uses the same keys:
+The library shows the same keys along the bottom, with each key's twin
+printed on it:
 
-| Button | Library |
-| --- | --- |
-| D-pad up/down | Previous / next tape |
-| L1 / R1 (or D-pad left/right) | A pile of tapes back / forward |
-| R2 (PLAY) | Put the tape in and play: an album from its first song, a song from that song |
-| A | Open an album to see its songs, or play the selected song |
-| L2 (STOP) or B | Back up a folder |
+| Button | Twin | Library |
+| --- | --- | --- |
+| D-pad up/down | | Previous / next tape |
+| L1 / R1 | | A pile of tapes back / forward |
+| R2 (PLAY) | A | Put the tape in and play: an album from its first song, a song from that song |
+| L2 (STOP) | B, D-pad left | Back up a folder |
+| D-pad right | | Open an album to see its songs |
 
 Select + Start or the Menu button quits.
 
@@ -76,6 +79,11 @@ Put a `MUSIC` folder at the top of an SD card, with one folder per album. The
 app asks muOS where the SD cards are mounted and shows each card's `MUSIC`
 folder that exists (usually `/mnt/sdcard/MUSIC` and `/mnt/mmc/MUSIC`).
 
+> **Switch the device off before taking an SD card out** to add music. muOS
+> sets up its storage when it starts, so a card pulled out and put back while
+> the device is on isn't picked up again, and Retro Cassette (which is
+> installed on the card) won't start until you restart the device.
+
 Set `RC_MUSIC_DIR` to use a different folder.
 
 ## Install on a device
@@ -83,9 +91,8 @@ Set `RC_MUSIC_DIR` to use a different folder.
 Made for muOS 2606 (Andromeda).
 
 1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh <version>`.
-2. Copy the `.muxapp` to `MUOS/ARCHIVE/` on the SD card and install it with
-   Applications → Archive Manager. Or copy the `RetroCassette` folder to
-   `MUOS/application/` on the SD card yourself.
+2. Copy the `.muxapp` to the `ARCHIVE` folder at the top of the SD card
+   (`SD1/ARCHIVE/`) and install it with Applications → Archive Manager.
 3. Start **Retro Cassette** from the Applications menu.
 
 The app runs on the LÖVE runtime that muOS ships with its built-in 2048 Plus

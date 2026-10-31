@@ -5,7 +5,7 @@ local Browser = {}
 Browser.__index = Browser
 
 -- Tapes visible in the stack at once.
-Browser.ROWS = 10
+Browser.ROWS = 9
 
 function Browser.new(roots)
 	local self = setmetatable({}, Browser)
@@ -121,6 +121,16 @@ function Browser:activate()
 		end
 	end
 	return queue, index
+end
+
+-- Opens the selected folder; does nothing on a song. Returns true if opened.
+function Browser:openSelection()
+	local e = self.entries[self.sel]
+	if e and e.kind == "dir" then
+		self:open(e.path)
+		return true
+	end
+	return false
 end
 
 -- PLAY on the selection: a song plays its folder from that song; a folder plays

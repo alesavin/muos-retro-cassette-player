@@ -35,29 +35,47 @@ local function insertTape(paths, index)
 	Settings.save()
 end
 
--- The library uses the same keys as the player: L1/R1 flip through the stack a
--- handful at a time, R2 (PLAY) puts the tape in, L2 (STOP) goes back up.
+-- The library uses the player's keys: L1/R1 flip a pile of tapes, R2 (PLAY)
+-- or A puts the tape in, L2 (STOP), B or D-pad left goes back up, D-pad right
+-- opens an album to show its songs.
 local function libraryAction(action, isRepeat)
 	if action == "up" then
 		browser:move(-1, not isRepeat)
 	elseif action == "down" then
 		browser:move(1, not isRepeat)
-	elseif action == "left" or action == "l1" then
-		browser:move(-Browser.ROWS, false)
-	elseif action == "right" or action == "r1" then
-		browser:move(Browser.ROWS, false)
 	elseif isRepeat then
 		return
-	elseif action == "a" then
-		insertTape(browser:activate())
-	elseif action == "r2" then
+	elseif action == "l1" then
+		browser:move(-Browser.ROWS, false)
+	elseif action == "r1" then
+		browser:move(Browser.ROWS, false)
+	elseif action == "right" then
+		browser:openSelection()
+	elseif action == "r2" or action == "a" then
 		insertTape(browser:playSelection())
-	elseif action == "b" or action == "l2" then
+	elseif action == "l2" or action == "b" or action == "left" then
 		browser:back()
 	end
 end
 
+-- How far each library key is pressed: a key also goes down for its twin.
+local function libraryKeys()
+	local function down(...)
+		for _, a in ipairs({ ... }) do
+			if Input.isDown(a) then
+				return 1
+			end
+		end
+		return 0
+	end
+	return { rew = down("l1"), stop = down("l2", "b", "left"), play = down("r2", "a"), ff = down("r1") }
+end
+
 local function deckAction(action)
+	if action == "left" or action == "right" then
+		deck:skip(action == "right" and 1 or -1)
+		return
+	end
 	local key = KEY_FOR_ACTION[action]
 	if key and deck:press(key) == "eject" then
 		deck:eject()
@@ -126,7 +144,7 @@ function love.update(dt)
 		keys = keys,
 		headEngaged = deck:headEngaged(),
 	})
-	library:update(dt, browser)
+	library:update(dt, browser, libraryKeys())
 	Sfx.update(deck)
 	local moving = screen == "deck" and walkman:isMoving() or screen == "library" and library:isMoving()
 	Frame.update(love.timer.getTime(), moving)

@@ -3,6 +3,7 @@
 -- Songs wear their folder's style, the same as the cassette in the player.
 local Browser = require("lib.browser")
 local Fonts = require("lib.fonts")
+local Keys = require("lib.keys")
 local Style = require("lib.style")
 local TapeArt = require("lib.tapeart")
 local fs = require("lib.fs")
@@ -16,6 +17,10 @@ local W = 720
 local SPINE_X, SPINE_W, SPINE_H = 40, 600, 38
 local STACK_Y, PITCH = 44, 43
 local SLIDE = 40
+
+-- The player's keys at the bottom, with the button that does the same printed
+-- under each: L1/R1 flip a pile, L2 goes back up, R2 plays.
+local TWINS = { stop = "B  or  ‹", play = "A" }
 
 -- "03 - Song Name.mp3" -> "Song Name"
 function View.songTitle(path)
@@ -34,6 +39,7 @@ function View.new()
 	self.slide = {}
 	self.path = false
 	self.moving = false
+	self.keyDepth = {}
 	return self
 end
 
@@ -45,7 +51,8 @@ local function approach(current, target, rate, dt)
 	return v, true
 end
 
-function View:update(dt, browser)
+-- keys: how far each key is pressed (0..1), by key name.
+function View:update(dt, browser, keys)
 	if browser.path ~= self.path then
 		-- New folder: show it in place, no scrolling in from elsewhere.
 		self.path = browser.path
@@ -58,6 +65,11 @@ function View:update(dt, browser)
 		local target = i == browser.sel and SLIDE or 0
 		local m
 		self.slide[i], m = approach(self.slide[i] or 0, target, 16, dt)
+		moving = moving or m
+	end
+	for _, k in ipairs(Keys.LAYOUT) do
+		local m
+		self.keyDepth[k.name], m = approach(self.keyDepth[k.name] or 0, keys[k.name] or 0, 30, dt)
 		moving = moving or m
 	end
 	self.moving = moving
@@ -169,6 +181,16 @@ function View:draw(browser)
 	end
 
 	drawBoxLabel(ui.safe(browser.path and fs.basename(browser.path) or "MUSIC"))
+
+	-- Bottom edge: the keys, and the D-pad's part between them.
+	lg.setColor(0.30, 0.22, 0.15)
+	lg.rectangle("fill", 0, 438, W, 42)
+	Keys.draw(self.keyDepth, TWINS)
+	lg.setFont(Fonts.get("print", 14))
+	lg.setColor(0.93, 0.88, 0.70, 0.75)
+	local e = entries[browser.sel]
+	local open = e and e.kind == "dir" and "     ›  open" or ""
+	lg.printf("up · down  choose" .. open, 210, 452, 300, "center")
 end
 
 return View
