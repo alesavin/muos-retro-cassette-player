@@ -22,6 +22,7 @@ local fs = require("lib.fs")
 local Browser = require("lib.browser")
 local Deck = require("lib.deck")
 local Tape = require("lib.tape")
+local Style = require("lib.style")
 
 local failures, count = 0, 0
 local function check(name, cond)
@@ -73,6 +74,23 @@ check("back selects folder", b.path == tmp and b.entries[b.sel].name == "Albums"
 b:back()
 check("back at root stays", b.path == tmp)
 
+-- Tape styles
+check("hash is stable", Style.hash("Kind of Blue") == Style.hash("Kind of Blue") and Style.hash("a") ~= Style.hash("b"))
+check("same name, same style", Style.of("Road Trip '86") == Style.of("Road Trip '86"))
+do
+	local shells, fonts, valid = {}, {}, true
+	for i = 1, 200 do
+		local st = Style.of("Album " .. i)
+		shells[st.shell.name], fonts[st.font] = true, true
+		valid = valid and st.paper and st.ink and st.stripe and math.abs(st.tilt) < 0.02
+	end
+	local ns, nf = 0, 0
+	for _ in pairs(shells) do ns = ns + 1 end
+	for _ in pairs(fonts) do nf = nf + 1 end
+	check("styles are complete", valid)
+	check("names spread over every shell and font", ns == #Style.SHELLS and nf == #Style.FONTS)
+end
+
 -- Tape timeline
 local tape = Tape.new({ "a", "b", "c" })
 check("estimated layout", tape.length == 3 * Tape.DEFAULT_DURATION + 2 * Tape.GAP)
@@ -109,6 +127,18 @@ sources.a.pos = 40
 d:update(0.01)
 check("tape follows the song", d.t == 40)
 
+d:press("play")
+check("play again pauses", d.mode == "pause" and not sources.a.playing and d:keysDown().play == 0.5 and d:headEngaged())
+d:update(1)
+check("pause keeps position", d.t == 40)
+d:press("play")
+d:update(0.01)
+check("play resumes from pause", d.mode == "play" and sources.a.playing and sources.a.pos == 40)
+d:press("play")
+d:press("stop")
+check("stop from pause", d.mode == "stop" and not d:headEngaged())
+d:press("play")
+d:update(0.01)
 d:press("stop")
 check("stop silences, keeps position", d.mode == "stop" and not sources.a.playing and d.t == 40)
 check("stop again ejects", d:press("stop") == "eject")
@@ -123,7 +153,7 @@ check("play from wound position", sources.a.playing and math.abs(sources.a.pos -
 -- AMS: tap FF while playing winds to the next song, then plays it.
 d:press("ff")
 d:update(0.1)
-check("held ff cues at higher pitch", sources.a.pitch == Deck.CUE_RATE and d:keysDown().ff)
+check("held ff cues at higher pitch", sources.a.pitch == Deck.CUE_RATE and d:keysDown().ff == 1)
 d:release("ff")
 check("tap ff starts music sensor", d.mode == "ams" and d.amsTarget == d.tape.tracks[2].start)
 for _ = 1, 100 do d:update(0.1) end
@@ -133,7 +163,7 @@ check("ams lands on next song and plays", d.mode == "play" and d.srcIndex == 2 a
 sources.b.pos = 1
 d:update(0.01)
 d:press("rew")
-check("held rew reviews muted", not sources.b.playing and d:keysDown().rew)
+check("held rew reviews muted", not sources.b.playing and d:keysDown().rew == 1)
 d:release("rew")
 check("tap rew goes to previous song", d.mode == "ams" and d.amsTarget == 0)
 
@@ -149,7 +179,23 @@ for _ = 1, 50 do d:update(0.1) end
 check("gap leads to next song", sources.b and sources.b.playing)
 sources.b.playing = false
 for _ = 1, 3 do d:update(0.1) end
-check("end of tape stops and pops PLAY", d.mode == "stop" and d.t == d.tape.length and not d:keysDown().play)
+check("end of tape stops and pops PLAY", d.mode == "stop" and d.t == d.tape.length and d:keysDown().play == 0)
+
+-- Putting the tape in at a later song survives the real lengths arriving.
+d = newDeck()
+local t3 = Tape.new({ "a", "b", "c" })
+d:insert(t3, t3.tracks[2].start)
+d:press("play")
+d:update(0.01)
+check("starts the chosen song", d.srcIndex == 2 and sources.b.playing and sources.b.pos == 0)
+t3:setDuration(1, 30)
+t3:setDuration(3, 70)
+d:update(0.01)
+check("position follows the layout", d.t == t3.tracks[2].start and d:currentTrack() == t3.tracks[2])
+d:press("stop")
+t3:setDuration(1, 20)
+d:update(0.01)
+check("stopped position follows too", d.t == t3.tracks[2].start)
 
 -- Unreadable files are skipped as blank tape.
 d = newDeck()

@@ -4,7 +4,8 @@ local fs = require("lib.fs")
 local Browser = {}
 Browser.__index = Browser
 
-Browser.ROWS = 16
+-- Tapes visible in the stack at once.
+Browser.ROWS = 10
 
 function Browser.new(roots)
 	local self = setmetatable({}, Browser)
@@ -120,6 +121,28 @@ function Browser:activate()
 		end
 	end
 	return queue, index
+end
+
+-- PLAY on the selection: a song plays its folder from that song; a folder plays
+-- its own songs from the first. A folder without songs is opened instead.
+function Browser:playSelection()
+	local e = self.entries[self.sel]
+	if not e then
+		return nil
+	end
+	if e.kind == "file" then
+		return self:activate()
+	end
+	local _, files = fs.list(e.path)
+	if #files == 0 then
+		self:open(e.path)
+		return nil
+	end
+	local queue = {}
+	for i, f in ipairs(files) do
+		queue[i] = fs.join(e.path, f)
+	end
+	return queue, 1
 end
 
 return Browser
