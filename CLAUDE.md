@@ -1,4 +1,4 @@
-# Retro Cassette
+# Retro Cassette Player
 
 A cassette-style music player for muOS handhelds, written in Lua for LÖVE 11.x.
 See README.md for features, controls and layout.
@@ -27,3 +27,4 @@ library spine and the cassette in the player.
 - The screen is only redrawn when something moves or changed (`lib/frame.lua`), to keep the device cool. A state change that doesn't come from a button press must call `Frame.invalidate()`, and anything animated must report itself through the screen's `isMoving()`.
 - Load fonts through `lib/fonts.lua`, never `love.graphics.newFont` directly.
 - Don't commit LÖVE binaries (`RetroCassette/bin/`) or `RetroCassette/data/`.
+- Never rename the `RetroCassette` folder or package: muOS identifies the app by its folder, so a new name installs a second copy beside the old one. The displayed name lives in `mux_lang.ini`.

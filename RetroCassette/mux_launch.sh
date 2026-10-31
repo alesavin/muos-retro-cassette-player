@@ -1,5 +1,5 @@
 #!/bin/sh
-# HELP: Retro Cassette - a cassette player. Put music in a MUSIC folder on your SD card.
+# HELP: Retro Cassette Player - a music player drawn as a cassette. Put music in a MUSIC folder on your SD card.
 # ICON: retrocassette
 # GRID: Cassette
 

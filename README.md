@@ -1,4 +1,4 @@
-# Retro Cassette
+# Retro Cassette Player
 
 A music player for [muOS](https://muos.dev) handhelds that shows a cassette
 inside a closed portable player. The handheld's own screen bezel acts as the
@@ -18,7 +18,8 @@ and the play head against the tape.
 Each tape's shell, label paper, stripes, handwriting and ink come from its
 album's name, and the cassette in the player matches its spine in the box.
 
-Built with [LÖVE](https://love2d.org) 11.x (Lua).
+Built with [LÖVE](https://love2d.org) 11.x (Lua). The app's folder and package
+are named `RetroCassette`, so updates install over the earlier version.
 
 ## How it works
 
@@ -81,7 +82,7 @@ folder that exists (usually `/mnt/sdcard/MUSIC` and `/mnt/mmc/MUSIC`).
 
 > **Switch the device off before taking an SD card out** to add music. muOS
 > sets up its storage when it starts, so a card pulled out and put back while
-> the device is on isn't picked up again, and Retro Cassette (which is
+> the device is on isn't picked up again, and Retro Cassette Player (which is
 > installed on the card) won't start until you restart the device.
 
 Set `RC_MUSIC_DIR` to use a different folder.
@@ -93,7 +94,7 @@ Made for muOS 2606 (Andromeda).
 1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh <version>`.
 2. Copy the `.muxapp` to the `ARCHIVE` folder at the top of the SD card
    (`SD1/ARCHIVE/`) and install it with Applications → Archive Manager.
-3. Start **Retro Cassette** from the Applications menu.
+3. Start **Retro Cassette Player** from the Applications menu.
 
 The app runs on the LÖVE runtime that muOS ships with its built-in 2048 Plus
 app, so nothing extra needs installing. A runtime copied into
