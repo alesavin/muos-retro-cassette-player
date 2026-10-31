@@ -31,18 +31,21 @@ end
 -- Frame number -> step (the loop runs at 30 per second). scripts/screenshots.sh
 -- makes nine albums, in this order: After Hours Jazz Club, Backseat Summer,
 -- Coastal Drive, Garage Band Demos, Kitchen Radio, Midnight Synth, ...
--- Keys: z = A, x = B, a/s/d/f = L1 (REW) / L2 (STOP) / R2 (PLAY) / R1 (FF).
+-- Keys: arrows = D-pad, z = A, x = B, a/s/d/f = L1 (REW) / L2 (STOP) / R2 (PLAY) / R1 (FF).
 local steps = {
 	[10] = function() tap("down") tap("down") end, -- select Coastal Drive
 	[30] = shot("01-library"),
-	[32] = function() tap("z") end, -- open it: its songs as tapes
+	[32] = function() tap("right") end, -- open it: its songs as tapes
 	[34] = function() tap("down") end,
 	[50] = shot("02-album"),
 	[60] = function() tap("d") end, -- PLAY: tape in, from song 2
 	[200] = shot("03-playing"),
 	[202] = function() tap("d") end, -- PLAY again: pause
 	[230] = shot("04-paused"),
-	[232] = function() tap("d") Input.keypressed("f") end, -- resume, hold FF: cue
+	[232] = function() tap("d") tap("right") end, -- resume, D-pad right: next song
+	[236] = shot("05a-skip"),
+	[250] = shot("05b-skipped"),
+	[252] = function() Input.keypressed("f") end, -- hold FF: cue
 	[290] = shot("05-cue"),
 	[292] = function() Input.keyreleased("f") tap("s") end, -- STOP
 	[330] = shot("06-stopped"),
@@ -56,7 +59,7 @@ local steps = {
 	[542] = function() tap("s") tap("s") end, -- stop and eject
 	[560] = function() Frame.POCKET_AFTER = 0.5 end,
 	[600] = shot("10-pocket"),
-	[602] = function() Frame.POCKET_AFTER = 30 tap("z") end, -- wakes the screen only
+	[602] = function() Frame.POCKET_AFTER = 30 tap("right") end, -- wakes the screen only
 	[620] = shot("11-woken"),
 	[640] = function() love.event.quit() end,
 }

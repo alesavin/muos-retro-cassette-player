@@ -197,6 +197,31 @@ t3:setDuration(1, 20)
 d:update(0.01)
 check("stopped position follows too", d.t == t3.tracks[2].start)
 
+-- D-pad skip: straight to the next / previous song, keeping play or pause.
+d = newDeck()
+local t4 = Tape.new({ "a", "b", "c" })
+d:insert(t4, 0)
+d:press("play")
+d:update(0.01)
+sources.a.pos = 20
+d:update(0.01)
+check("skip forward", d:skip(1) and d.t == t4.tracks[2].start and d:tapeSpeed() > 0 and d:winding())
+d:update(0.01)
+check("skip keeps playing the new song", d.mode == "play" and d.srcIndex == 2 and sources.b.playing and sources.b.pos == 0)
+sources.b.pos = 10
+d:update(0.01)
+check("skip back restarts the song", d:skip(-1) and d.t == t4.tracks[2].start)
+d:update(0.01)
+check("skip back again goes to the previous song", d:skip(-1) and d.t == 0)
+d:press("play")
+check("skip while paused stays paused", d:skip(1) and d.mode == "pause" and d.t == t4.tracks[2].start)
+d:update(1)
+check("whir ends", d:tapeSpeed() == 0 and not d:winding())
+d:skip(1)
+check("no skip past the last song", not d:skip(1) and d.t == t4.tracks[3].start)
+d:press("ff")
+check("no skip while winding", not d:skip(-1))
+
 -- Unreadable files are skipped as blank tape.
 d = newDeck()
 d:insert(Tape.new({ "bad", "b" }), 0)

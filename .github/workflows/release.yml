@@ -44,6 +44,7 @@ jobs:
           name: Retro Cassette ${{ steps.version.outputs.version }}
           files: dist/*.muxapp
           body: |
-            For muOS 2606 (Andromeda). Copy the `.muxapp` to `MUOS/ARCHIVE/` on your SD card and
-            install it with Applications → Archive Manager. It uses the LÖVE runtime that muOS
-            ships with 2048 Plus, so nothing else needs installing.
+            For muOS 2606 (Andromeda). Copy the `.muxapp` to the `ARCHIVE` folder at the top of
+            your SD card (`SD1/ARCHIVE/`) and install it with Applications → Archive Manager.
+            It uses the LÖVE runtime that muOS ships with 2048 Plus, so nothing else needs installing.
+            Switch the device off before taking an SD card out to add music, or restart it afterwards.

@@ -1,9 +1,10 @@
 -- Draws the cassette as seen through the tinted lid of a closed player. The
 -- handheld's own screen bezel is the player body, so only the parts that matter
--- are drawn: the cassette filling the screen and the transport keys along the
--- bottom edge above the real shoulder buttons (L1 L2 ... R2 R1 on the RG34XXSP
--- hinge). The cassette is drawn in its tape's style, matching its library spine.
+-- are drawn: the cassette filling the screen and the transport keys (lib/keys.lua)
+-- along the bottom edge above the real shoulder buttons. The cassette is drawn
+-- in its tape's style, matching its library spine.
 local Fonts = require("lib.fonts")
+local Keys = require("lib.keys")
 local TapeArt = require("lib.tapeart")
 local ui = require("lib.ui")
 local lg = love.graphics
@@ -32,15 +33,6 @@ local WINDOW = { x = 186, y = 182, w = 268, h = 76 }
 local HUB_L, HUB_R, HUB_Y = 230, 410, 220
 local R_MIN, R_MAX = 23, 76
 
--- Keys in screen coordinates, left to right as the shoulder buttons sit.
-local KEYS = {
-	{ name = "rew", x = 14 },
-	{ name = "stop", x = 112 },
-	{ name = "play", x = 518 },
-	{ name = "ff", x = 616 },
-}
-local KEY_W, KEY_TOP, KEY_TRAVEL = 90, 444, 16
-
 -- Tape speed at the pack surface during play, in px/s. Reels turn at speed / radius,
 -- so the nearly empty reel spins faster, as on a real cassette.
 local PLAY_SPEED = 95
@@ -57,7 +49,7 @@ function Walkman.new()
 	self.shown = 0
 	self.head = 0 -- 0 = retracted, 1 = against the tape
 	self.keyDepth = {}
-	for _, k in ipairs(KEYS) do
+	for _, k in ipairs(Keys.LAYOUT) do
 		self.keyDepth[k.name] = 0
 	end
 	self.moving = false
@@ -80,7 +72,7 @@ function Walkman:update(dt, state)
 	self.shown, m1 = approach(self.shown, state.progress, 8, dt)
 	self.head, m2 = approach(self.head, state.headEngaged and 1 or 0, 20, dt)
 	local moving = m1 or m2 or state.speed ~= 0
-	for _, k in ipairs(KEYS) do
+	for _, k in ipairs(Keys.LAYOUT) do
 		self.keyDepth[k.name], m = approach(self.keyDepth[k.name], state.keys[k.name] or 0, 30, dt)
 		moving = moving or m
 	end
@@ -264,30 +256,6 @@ function Walkman:drawCassette(info)
 	drawScrew(st, 320, 356)
 end
 
--- Keys stand up from the bottom edge and sink toward the hinge when pressed.
-function Walkman:drawKeys()
-	for _, k in ipairs(KEYS) do
-		local top = KEY_TOP + self.keyDepth[k.name] * KEY_TRAVEL
-		setColor(C.keySide)
-		lg.rectangle("fill", k.x, top, KEY_W, 60, 6, 6)
-		setColor(C.key)
-		lg.rectangle("fill", k.x + 2, top, KEY_W - 4, 54, 6, 6)
-		setColor(C.keyMark)
-		local cx = k.x + KEY_W / 2
-		if k.name == "stop" then
-			-- STOP/EJECT: pressed again while stopped, it opens the lid.
-			ui.icon("stop", cx - 17, top + 9, 12)
-			ui.icon("eject", cx + 5, top + 9, 12)
-		elseif k.name == "play" then
-			-- PLAY/PAUSE
-			ui.icon("play", cx - 17, top + 9, 12)
-			ui.icon("pause", cx + 4, top + 9, 12)
-		else
-			ui.icon(k.name, cx - 7, top + 9, 13)
-		end
-	end
-end
-
 -- info: { title, subtitle, tapeLength, style }
 function Walkman:draw(info)
 	local W, H = Walkman.WIDTH, Walkman.HEIGHT
@@ -309,7 +277,7 @@ function Walkman:draw(info)
 	lg.setColor(1, 1, 1, 0.03)
 	lg.polygon("fill", 560, 0, 585, 0, 355, H, 330, H)
 
-	self:drawKeys()
+	Keys.draw(self.keyDepth)
 end
 
 return Walkman
