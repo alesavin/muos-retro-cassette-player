@@ -44,6 +44,6 @@ jobs:
           name: Retro Cassette ${{ steps.version.outputs.version }}
           files: dist/*.muxapp
           body: |
-            Install: copy the `.muxapp` to your device and install it with muOS's Archive Manager,
-            or unzip it and copy the `RetroCassette` folder to `/mnt/mmc/MUOS/application/`.
-            The app needs a LÖVE runtime; see the README.
+            For muOS 2606 (Andromeda). Copy the `.muxapp` to `MUOS/ARCHIVE/` on your SD card and
+            install it with Applications → Archive Manager. It uses the LÖVE runtime that muOS
+            ships with 2048 Plus, so nothing else needs installing.

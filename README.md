@@ -51,31 +51,32 @@ Space = Start, Esc = quit.
 
 ## Where to put music
 
-The app looks for these folders and shows the ones that exist:
-
-- `/mnt/sdcard/MUSIC`
-- `/mnt/mmc/MUSIC`
-- `/mnt/union/MUSIC`
+Put a `MUSIC` folder at the top of an SD card, with one folder per album. The
+app asks muOS where the SD cards are mounted and shows each card's `MUSIC`
+folder that exists (usually `/mnt/sdcard/MUSIC` and `/mnt/mmc/MUSIC`).
 
 Set `RC_MUSIC_DIR` to use a different folder.
 
 ## Install on a device
 
-1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh 0.1.0` (writes `dist/RetroCassette-0.1.0.muxapp`). Pushing a `v*` tag builds a release automatically.
-2. Copy the `.muxapp` to the device's archive folder and install it from muOS's
-   Archive Manager. Or copy the `RetroCassette` folder to
-   `/mnt/mmc/MUOS/application/` yourself.
+Made for muOS 2606 (Andromeda).
+
+1. Download `RetroCassette-<version>.muxapp` from the [Releases](https://github.com/alesavin/muos-retro-music-player/releases) page, or build it with `scripts/package.sh <version>`.
+2. Copy the `.muxapp` to `MUOS/ARCHIVE/` on the SD card and install it with
+   Applications → Archive Manager. Or copy the `RetroCassette` folder to
+   `MUOS/application/` on the SD card yourself.
 3. Start **Retro Cassette** from the Applications menu.
 
-The app needs a LÖVE runtime. If your muOS build doesn't put `love` on `PATH`,
-copy `love` and `libs.aarch64/` from a LÖVE app that ships with muOS into
-`RetroCassette/bin/` before packaging (see [RetroCassette/bin/README.md](RetroCassette/bin/README.md)).
+The app runs on the LÖVE runtime that muOS ships with its built-in 2048 Plus
+app, so nothing extra needs installing. A runtime copied into
+`RetroCassette/bin/` takes priority (see [RetroCassette/bin/README.md](RetroCassette/bin/README.md)).
+While the app is open the device won't go to sleep, so music keeps playing.
 Output from the app goes to `RetroCassette/data/log.txt`, and settings are kept
 in `RetroCassette/data/`.
 
-> **Not yet tested on hardware.** The launcher, archive layout and button
-> mapping follow what other muOS LÖVE apps do, but they still need to be checked on
-> a real device. L2/R2 are read as analog triggers, and A/B can come out swapped
+> **Not yet tested on hardware.** The launcher and archive layout follow the
+> muOS 2606 source (its own LÖVE app and archive installer), but they still need
+> to be checked on a real device. L2/R2 are read as analog triggers, and A/B can come out swapped
 > depending on the device's controller mapping.
 
 ## Develop on a desktop
@@ -95,7 +96,9 @@ scripts/screenshots.sh     # runs the real app headless and saves screenshots (n
 
 ```
 RetroCassette/            what gets installed on the device
-  mux_launch.sh           muOS launcher (HELP / ICON / GRID headers)
+  mux_launch.sh           muOS launcher (ICON / GRID headers)
+  mux_lang.ini            name and help text for the Applications menu
+  glyph/retrocassette.svg icon for the Applications menu
   game/                   LÖVE project
     main.lua              screens and button handling
     lib/walkman.lua       draws the player: lid, cassette, keys, volume wheel

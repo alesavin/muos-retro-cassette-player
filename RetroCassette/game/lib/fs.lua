@@ -4,12 +4,9 @@ local fs = {}
 
 fs.AUDIO_EXT = { mp3 = true, ogg = true, oga = true, flac = true, wav = true }
 
--- Folders checked for music, in order. RC_MUSIC_DIR overrides them (handy on a desktop).
-fs.CANDIDATE_ROOTS = {
-	"/mnt/sdcard/MUSIC",
-	"/mnt/mmc/MUSIC",
-	"/mnt/union/MUSIC",
-}
+-- Default SD card mount points. On muOS the launcher passes the device's real
+-- ones in RC_MUSIC_MOUNTS (colon-separated); RC_MUSIC_DIR overrides everything.
+fs.DEFAULT_MOUNTS = { "/mnt/sdcard", "/mnt/mmc" }
 
 local function quote(s)
 	return "'" .. (s:gsub("'", "'\\''")) .. "'"
@@ -96,9 +93,28 @@ function fs.readAll(p)
 	return data
 end
 
+-- The MUSIC folder of each mount, without duplicates, in order.
+function fs.candidateRoots(mountsVar)
+	local candidates, seen = {}, {}
+	local function add(mount)
+		local dir = fs.join(mount, "MUSIC")
+		if mount ~= "" and not seen[dir] then
+			seen[dir] = true
+			candidates[#candidates + 1] = dir
+		end
+	end
+	for mount in (mountsVar or ""):gmatch("[^:]+") do
+		add(mount)
+	end
+	for _, mount in ipairs(fs.DEFAULT_MOUNTS) do
+		add(mount)
+	end
+	return candidates
+end
+
 function fs.musicRoots()
 	local override = os.getenv("RC_MUSIC_DIR")
-	local candidates = override and { override } or fs.CANDIDATE_ROOTS
+	local candidates = override and { override } or fs.candidateRoots(os.getenv("RC_MUSIC_MOUNTS"))
 	local roots = {}
 	for _, dir in ipairs(candidates) do
 		if fs.isDir(dir) then
