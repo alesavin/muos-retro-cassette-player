@@ -19,6 +19,7 @@ cp -R "$ROOT/$APP" "$STAGE/"
 rm -rf "$STAGE/$APP/data"
 rm -f "$STAGE/$APP/bin/README.md"
 chmod +x "$STAGE/$APP/mux_launch.sh"
+cp "$ROOT/LICENSE" "$STAGE/$APP/LICENSE"
 
 mkdir -p "$ROOT/dist"
 rm -f "$OUT"

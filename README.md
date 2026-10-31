@@ -164,3 +164,15 @@ tools/                    screenshot harness and test music generator
 - Read ID3/Vorbis tags for the label
 - Remember where each tape was stopped, like a real cassette does
 - Side B: flip the tape to play the folder in reverse
+
+## Licence
+
+Copyright (C) 2026 Alex Savin
+
+Retro Cassette Player is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License, version 3, as published
+by the Free Software Foundation. It is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; see [LICENSE](LICENSE) for details.
+
+The bundled label fonts keep their own licences (SIL Open Font Licence and
+Apache 2.0); see [RetroCassette/game/assets/fonts](RetroCassette/game/assets/fonts).
