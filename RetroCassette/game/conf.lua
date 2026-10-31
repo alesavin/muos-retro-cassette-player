@@ -1,7 +1,7 @@
 function love.conf(t)
 	t.identity = "retrocassette"
 	t.version = "11.4"
-	t.window.title = "Retro Cassette"
+	t.window.title = "Retro Cassette Player"
 	t.window.width = 720
 	t.window.height = 480
 	t.window.resizable = true
