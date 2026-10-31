@@ -48,23 +48,6 @@ function ui.clip(x, y, w, h)
 	lg.setScissor(transformedRect(x, y, w, h))
 end
 
--- Prints text, scrolling it sideways when it doesn't fit in w.
-function ui.marquee(font, text, x, y, w, clock)
-	lg.setFont(font)
-	local tw = font:getWidth(text)
-	if tw <= w then
-		lg.print(text, x, y)
-		return
-	end
-	local span = tw + 60
-	local off = (math.max(0, clock - 1.5) * 35) % span
-	local sx, sy, sw, sh = lg.getScissor()
-	lg.intersectScissor(transformedRect(x, y - 2, w, font:getHeight() + 4))
-	lg.print(text, math.floor(x - off), y)
-	lg.print(text, math.floor(x - off + span), y)
-	ui.setScissor(sx, sy, sw, sh)
-end
-
 function ui.icon(kind, x, y, s)
 	if kind == "play" then
 		lg.polygon("fill", x, y, x, y + s, x + s * 0.85, y + s / 2)

@@ -3,14 +3,15 @@
 A music player for [muOS](https://muos.dev) handhelds that shows a cassette
 inside a closed portable player. The handheld's own screen bezel acts as the
 player body, so the cassette fills the screen. The transport keys sit on the bottom
-edge, right above the shoulder buttons, and the volume wheel sits on the left
-edge next to the volume buttons. The layout is made for the Anbernic RG34XXSP
+edge, right above the shoulder buttons. The layout is made for the Anbernic RG34XXSP
 (720×480); other screens get black bars. There are no on-screen icons or readouts. You
 can tell what the player is doing the way you would with a real one: from the
 keys that are pressed down, the turning reels, how much tape is on each reel
 and the play head against the tape.
 
-![Deck](docs/deck.png)
+| Library | Player |
+| --- | --- |
+| ![Library](docs/library.png) | ![Deck](docs/deck.png) |
 
 Built with [LÖVE](https://love2d.org) 11.x (Lua).
 
@@ -20,10 +21,18 @@ Built with [LÖVE](https://love2d.org) 11.x (Lua).
   with a few seconds of blank tape between them. The reels show how far you are
   through the whole album, and the minute marks on the cassette window show the
   time: read it where the edge of the right-hand tape pack sits.
+- **The library is a box of tapes.** Each album folder, and each song inside
+  one, is a cassette lying in a stack with its spine facing you.
+- **Every tape has its own look**, chosen from its folder's name: shell colour,
+  label paper, stripes, the handwriting or typeface of the title and the ink.
+  The cassette in the player looks exactly like its spine in the box.
 - **The label** shows the song under the head and the folder (album or artist) name.
-- **The volume wheel** on the left edge rolls to the current level, 0–10.
-- **The keys stay down** like real ones. PLAY stays down while playing, and FF or
-  REW stays down while winding. They pop up with a clunk at the end of the tape.
+- **The keys stay down** like real ones. PLAY stays down while playing, sits
+  half-way while paused, and FF or REW stays down while winding. They pop up
+  with a clunk at the end of the tape.
+- **Volume** is the device's own volume buttons.
+- **Pocket mode:** after 30 seconds without a button press the screen goes
+  dark; music keeps playing. Any button wakes it (that press does nothing else).
 
 MP3, OGG, FLAC and WAV are supported.
 
@@ -35,14 +44,21 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | Button | Key | Stopped | Playing |
 | --- | --- | --- | --- |
 | L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted |
-| L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is, so this is also pause |
-| R2 | PLAY | Plays | |
+| L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is |
+| R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
 
-A works as PLAY and B as STOP. D-pad up and down turn the volume wheel.
+A works as PLAY and B as STOP.
 
-In the library: D-pad to move (left and right page), A to open a folder or to
-put the tape in at the chosen song, B to go up a folder.
+The library uses the same keys:
+
+| Button | Library |
+| --- | --- |
+| D-pad up/down | Previous / next tape |
+| L1 / R1 (or D-pad left/right) | A pile of tapes back / forward |
+| R2 (PLAY) | Put the tape in and play: an album from its first song, a song from that song |
+| A | Open an album to see its songs, or play the selected song |
+| L2 (STOP) or B | Back up a folder |
 
 Select + Start or the Menu button quits.
 
@@ -88,7 +104,7 @@ RC_MUSIC_DIR=~/Music love RetroCassette/game
 Checks:
 
 ```sh
-luajit tests/run.lua       # file listing, browser, tape timeline and transport logic, LÖVE stubbed out
+luajit tests/run.lua       # file listing, browser, styles, tape timeline and transport logic, LÖVE stubbed out
 scripts/screenshots.sh     # runs the real app headless and saves screenshots (needs love, xvfb-run, python3)
 ```
 
@@ -101,17 +117,21 @@ RetroCassette/            what gets installed on the device
   glyph/retrocassette.svg icon for the Applications menu
   game/                   LÖVE project
     main.lua              screens and button handling
-    lib/walkman.lua       draws the player: lid, cassette, keys, volume wheel
-    lib/deck.lua          transport: latching keys, cue/review, music sensor, audio
+    lib/walkman.lua       draws the player: cassette in its style, keys
+    lib/deck.lua          transport: latching keys, pause, cue/review, music sensor, audio
     lib/tape.lua          tape timeline: songs and gaps on one side
     lib/durations.lua     reads song lengths on a background thread
     lib/browser.lua       folder navigation
-    lib/browser_view.lua  library screen drawing
+    lib/library_view.lua  the box of tapes
+    lib/style.lua         a tape's look from a hash of its name
+    lib/tapeart.lua       drawing shared by spines and the cassette
+    lib/fonts.lua         label fonts (assets/fonts, free licences)
+    lib/frame.lua         frame pacing and pocket mode
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
     lib/sfx.lua           generated hiss, winding whir and key clunk
-    lib/settings.lua      settings file (volume, last folder)
-    lib/scaler.lua        640x480 canvas scaled to the screen
+    lib/settings.lua      settings file (last folder)
+    lib/scaler.lua        720x480 canvas scaled to the screen
 scripts/                  package.sh, screenshots.sh
 tests/run.lua             headless tests
 tools/                    screenshot harness and test music generator
@@ -121,5 +141,4 @@ tools/                    screenshot harness and test music generator
 
 - Read ID3/Vorbis tags for the label
 - Remember where each tape was stopped, like a real cassette does
-- A screen-off mode to save battery while listening
 - Side B: flip the tape to play the folder in reverse

@@ -46,19 +46,23 @@ function Durations.probe(tape)
 	end
 end
 
+-- Applies finished results to the tape; returns true if any arrived.
 function Durations.update(tape)
 	local err = thread:getError()
 	if err and not Durations.failed then
 		Durations.failed = true
 		print("durations thread: " .. err)
 	end
+	local changed = false
 	local r = results:pop()
 	while r do
 		if tape and r.tape == generation and r.duration > 0 then
 			tape:setDuration(r.index, r.duration)
+			changed = true
 		end
 		r = results:pop()
 	end
+	return changed
 end
 
 return Durations

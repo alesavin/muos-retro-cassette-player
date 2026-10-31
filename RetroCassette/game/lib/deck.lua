@@ -4,6 +4,7 @@
 --   stopped      FF/REW tap latches and winds until STOP or the end of the tape
 --   playing      FF held = cue (fast, high-pitched audio), REW held = review (muted)
 --                FF/REW tapped = wind to the next song / back to this or the previous song
+--   PLAY         while playing, pauses (the key stays half-way down); again resumes
 --   STOP         releases every key; pressed again while stopped, opens the lid
 local fs = require("lib.fs")
 
@@ -37,7 +38,7 @@ function Deck.new(opts)
 	self.onClunk = opts.onClunk or function() end
 	self.tape = nil
 	self.t = 0 -- position on the tape, in seconds
-	self.mode = "stop" -- stop | play | ff | rew | ams
+	self.mode = "stop" -- stop | play | pause | ff | rew | ams
 	self.hold = nil -- while playing: 1 = cue, -1 = review
 	self.volume = 0.8
 	self.clock = 0
@@ -68,6 +69,30 @@ function Deck:insert(tape, t)
 	self:eject()
 	self.tape = tape
 	self.t = t or 0
+	self:remember()
+end
+
+-- Song lengths arrive after the tape is in, and each one moves the songs after
+-- it. The position is therefore also held as (song, offset into it) and
+-- re-applied whenever the tape's layout changes.
+function Deck:remember()
+	local i = self.tape:locate(self.t)
+	self.anchorIndex = i
+	self.anchorOffset = self.t - self.tape.tracks[i].start
+	self.anchorVersion = self.tape.version
+end
+
+function Deck:resync()
+	local tape = self.tape
+	if tape.version == self.anchorVersion then
+		return
+	end
+	local t = tape.tracks[self.anchorIndex].start + self.anchorOffset
+	self.t = math.max(0, math.min(tape.length, t))
+	if self.mode == "ams" then
+		self.amsTarget = tape.tracks[self.amsIndex].start
+	end
+	self.anchorVersion = tape.version
 end
 
 function Deck:eject()
@@ -96,12 +121,11 @@ function Deck:press(key)
 		return nil
 	end
 	if key == "play" then
-		if self.mode == "play" or self.mode == "ams" or self.t >= self.tape.length then
+		if self.mode == "ams" or self.hold or self.t >= self.tape.length then
 			return nil
 		end
 		self:silence()
-		self.mode = "play"
-		self.hold = nil
+		self.mode = self.mode == "play" and "pause" or "play"
 	elseif key == "stop" then
 		if self.mode == "stop" then
 			return "eject"
@@ -139,16 +163,16 @@ function Deck:release(key)
 		-- source, so the next update seeks to the new position).
 		return
 	end
-	local target
+	local target, index
 	if dir > 0 then
-		target = self.tape:nextStart(self.holdT)
+		target, index = self.tape:nextStart(self.holdT)
 	else
-		target = self.tape:prevStart(self.holdT)
+		target, index = self.tape:prevStart(self.holdT)
 	end
 	self:silence()
 	if target then
 		self.mode = "ams"
-		self.amsTarget = target
+		self.amsTarget, self.amsIndex = target, index
 		self.amsDir = target >= self.t and 1 or -1
 	else
 		-- No song after this one: wind on to the end of the tape.
@@ -187,6 +211,7 @@ function Deck:updatePlay(dt)
 		if not self:loadSource(i) then
 			return -- the track now has no length; the next update moves past it
 		end
+		self:resync()
 		i, offset, blank = tape:locate(self.t)
 	end
 	if blank then
@@ -217,6 +242,7 @@ function Deck:update(dt)
 	if not self.tape then
 		return
 	end
+	self:resync()
 	if self.mode == "ff" or self.mode == "rew" then
 		local dir = self.mode == "ff" and 1 or -1
 		self.t = self.t + dir * self:windRate() * dt
@@ -232,6 +258,9 @@ function Deck:update(dt)
 		end
 	elseif self.mode == "play" then
 		self:updatePlay(dt)
+	end
+	if self.tape then
+		self:remember()
 	end
 end
 
@@ -272,14 +301,26 @@ function Deck:tapeSpeed()
 	return 0
 end
 
--- Which keys are latched down (STOP is only down while held, so the caller adds it).
+-- How far each key is down: 1 latched, 0.5 for PLAY while paused (STOP is only
+-- down while held, so the caller adds it).
 function Deck:keysDown()
 	local ams = self.mode == "ams"
+	local play = 0
+	if self.mode == "play" or ams then
+		play = 1
+	elseif self.mode == "pause" then
+		play = 0.5
+	end
 	return {
-		rew = self.mode == "rew" or self.hold == -1 or (ams and self.amsDir < 0),
-		play = self.mode == "play" or ams,
-		ff = self.mode == "ff" or self.hold == 1 or (ams and self.amsDir > 0),
+		rew = (self.mode == "rew" or self.hold == -1 or (ams and self.amsDir < 0)) and 1 or 0,
+		play = play,
+		ff = (self.mode == "ff" or self.hold == 1 or (ams and self.amsDir > 0)) and 1 or 0,
 	}
+end
+
+-- The head touches the tape while playing or paused.
+function Deck:headEngaged()
+	return self.mode == "play" or self.mode == "pause" or self.mode == "ams"
 end
 
 -- Title of the song under the head (or the next one while on blank tape).

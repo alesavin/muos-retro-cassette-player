@@ -9,6 +9,10 @@ trap 'rm -rf "$WORK"' EXIT
 
 mkdir -p "$WORK/MUSIC/Synthwave Mixtape"
 python3 "$ROOT/tools/make_test_music.py" "$WORK/MUSIC/Synthwave Mixtape"
+cp -R "$WORK/MUSIC/Synthwave Mixtape" "$WORK/MUSIC/Road Trip '86"
+for ALBUM in "Kind of Blue" "Tape Deck Classics" "Uptown Nights" "Weekend Chill" "Zero Gravity"; do
+	cp -R "$WORK/MUSIC/Synthwave Mixtape" "$WORK/MUSIC/$ALBUM"
+done
 
 OUT="${XDG_DATA_HOME:-$HOME/.local/share}/love/rc-harness"
 rm -rf "$OUT"

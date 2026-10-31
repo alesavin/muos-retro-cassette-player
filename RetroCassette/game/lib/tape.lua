@@ -27,7 +27,10 @@ function Tape:estimate()
 	return n > 0 and sum / n or Tape.DEFAULT_DURATION
 end
 
+-- Lays the tracks out on the tape. version changes every time, so a player
+-- holding a position can tell the layout moved under it.
 function Tape:layout()
+	self.version = (self.version or 0) + 1
 	local est = self:estimate()
 	local t = 0
 	for i, tr in ipairs(self.tracks) do
@@ -70,25 +73,26 @@ function Tape:locate(t)
 	return n, self.tracks[n].length, true
 end
 
--- Start of the next song after t, or nil on the last one.
+-- Start and index of the next song after t, or nil on the last one.
 function Tape:nextStart(t)
-	for _, tr in ipairs(self.tracks) do
+	for i, tr in ipairs(self.tracks) do
 		if tr.start > t + 0.01 then
-			return tr.start
+			return tr.start, i
 		end
 	end
 	return nil
 end
 
--- Start of the current song, or of the previous one when t is in its first 3 seconds.
+-- Start and index of the current song, or of the previous one when t is in
+-- its first 3 seconds.
 function Tape:prevStart(t)
-	local target = 0
-	for _, tr in ipairs(self.tracks) do
+	local target, index = 0, 1
+	for i, tr in ipairs(self.tracks) do
 		if tr.start <= t - 3 then
-			target = tr.start
+			target, index = tr.start, i
 		end
 	end
-	return target
+	return target, index
 end
 
 return Tape

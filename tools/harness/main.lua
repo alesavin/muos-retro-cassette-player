@@ -10,35 +10,50 @@ local function tap(key)
 	Input.keyreleased(key)
 end
 
+local Frame = require("lib.frame")
+local Fonts = require("lib.fonts")
+
+-- The app's assets aren't in this game's folder, so read the fonts directly.
+function Fonts.source(name)
+	local f = assert(io.open(GAME .. "/assets/fonts/" .. name .. ".ttf", "rb"))
+	local data = f:read("*a")
+	f:close()
+	return love.filesystem.newFileData(data, name .. ".ttf")
+end
+
 local function shot(name)
 	return function()
+		Frame.invalidate() -- static screens are only drawn on change
 		love.graphics.captureScreenshot(name .. ".png")
 	end
 end
 
--- Frame number -> step. The music folder is expected to hold one album folder.
--- Keys: z = A, a/s/d/f = L1 (REW) / L2 (STOP) / R2 (PLAY) / R1 (FF).
+-- Frame number -> step (the loop runs at 30 per second). The music folder holds
+-- albums in this order: Kind of Blue, Road Trip '86, Synthwave Mixtape, then four more.
+-- Keys: z = A, x = B, a/s/d/f = L1 (REW) / L2 (STOP) / R2 (PLAY) / R1 (FF).
 local steps = {
-	[10] = shot("1-library"),
-	[12] = function() tap("z") end, -- open the album
-	[20] = shot("2-album"),
-	[22] = function() tap("z") end, -- insert the tape at the first song; PLAY latches
+	[10] = function() tap("down") tap("down") end, -- select Synthwave Mixtape
+	[30] = shot("1-library"),
+	[32] = function() tap("z") end, -- open it: its songs as tapes
+	[50] = shot("2-album"),
+	[52] = function() tap("down") end,
+	[60] = function() tap("d") end, -- PLAY: tape in, from song 2
 	[200] = shot("3-playing"),
-	[202] = function() Input.keypressed("f") end, -- hold FF: cue
-	[260] = shot("4-cue"),
-	[262] = function() Input.keyreleased("f") tap("f") end, -- tap FF: music sensor to song 2
-	[264] = shot("5-ams"),
-	[400] = shot("6-song2"),
-	[402] = function() tap("s") end, -- STOP
-	[404] = function() tap("down") tap("down") tap("down") end, -- volume down
-	[440] = shot("7-stopped"),
-	[442] = function() tap("f") end, -- FF while stopped latches
-	[460] = shot("8-wind"),
-	[600] = shot("9-end"),
-	[602] = function() tap("s") end, -- STOP releases FF
-	[606] = function() tap("s") end, -- STOP while stopped opens the lid
-	[620] = shot("10-ejected"),
-	[640] = function() love.event.quit() end,
+	[202] = function() tap("d") end, -- PLAY again: pause
+	[230] = shot("4-paused"),
+	[232] = function() tap("d") Input.keypressed("f") end, -- resume, hold FF: cue
+	[290] = shot("5-cue"),
+	[292] = function() Input.keyreleased("f") tap("s") end, -- STOP
+	[330] = shot("6-stopped"),
+	[332] = function() tap("s") end, -- STOP again: eject to the library
+	[360] = shot("7-ejected"),
+	[362] = function() tap("s") end, -- L2 in the library: up a folder
+	[380] = shot("8-up"),
+	[382] = function() Frame.POCKET_AFTER = 0.5 end,
+	[420] = shot("9-pocket"),
+	[422] = function() Frame.POCKET_AFTER = 30 tap("z") end, -- wakes the screen only
+	[440] = shot("10-woken"),
+	[460] = function() love.event.quit() end,
 }
 
 local frame = 0
