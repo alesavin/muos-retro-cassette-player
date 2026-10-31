@@ -40,8 +40,9 @@ check("parent of top", fs.parent("/mnt") == "/")
 check("stem", fs.stem("01 - Song.name.mp3") == "01 - Song.name")
 check("isAudio", fs.isAudio("a.FLAC") and not fs.isAudio("cover.jpg"))
 check("music roots from muOS mounts", table.concat(fs.candidateRoots("/mnt/sdcard:/mnt/mmc"), ",") == "/mnt/sdcard/MUSIC,/mnt/mmc/MUSIC")
-check("music roots: other mounts first, defaults kept", table.concat(fs.candidateRoots("/mnt/usb:"), ",") == "/mnt/usb/MUSIC,/mnt/sdcard/MUSIC,/mnt/mmc/MUSIC")
-check("music roots without muOS", table.concat(fs.candidateRoots(nil), ",") == "/mnt/sdcard/MUSIC,/mnt/mmc/MUSIC")
+check("music roots: other mounts first, defaults kept", table.concat(fs.candidateRoots("/mnt/usb:"), ",") == "/mnt/usb/MUSIC,/mnt/mmc/MUSIC,/mnt/sdcard/MUSIC")
+check("card labels", fs.rootLabel("/mnt/mmc/MUSIC") == "SD1 · MUSIC" and fs.rootLabel("/mnt/sdcard/MUSIC") == "SD2 · MUSIC" and fs.rootLabel("/mnt/mmcx/MUSIC") == "/mnt/mmcx/MUSIC")
+check("music roots without muOS: SD1 first", table.concat(fs.candidateRoots(nil), ",") == "/mnt/mmc/MUSIC,/mnt/sdcard/MUSIC")
 
 -- Build a temporary music tree.
 local tmp = os.tmpname()
@@ -73,6 +74,29 @@ b:back()
 check("back selects folder", b.path == tmp and b.entries[b.sel].name == "Albums")
 b:back()
 check("back at root stays", b.path == tmp)
+
+-- Letter jumps
+check("initials", Browser.initial("kind of blue") == "K" and Browser.initial("'86 Mix") == "#" and Browser.initial("Ёлка") == "Ё")
+do
+	local lb = Browser.new({})
+	lb.entries = {}
+	for _, n in ipairs({ "Amber", "Apple", "Blue", "Bright", "Bronze", "Cold", "Zero" }) do
+		lb.entries[#lb.entries + 1] = { kind = "dir", name = n }
+	end
+	lb.sel = 2
+	lb:jumpLetter(1)
+	check("jump to next letter", lb.sel == 3)
+	lb:jumpLetter(1)
+	check("jump again", lb.sel == 6)
+	lb.sel = 5
+	lb:jumpLetter(-1)
+	check("back to start of this letter", lb.sel == 3)
+	lb:jumpLetter(-1)
+	check("then to the previous letter", lb.sel == 1)
+	lb.sel = 7
+	lb:jumpLetter(1)
+	check("no letter after the last", lb.sel == 7)
+end
 
 -- Tape styles
 check("hash is stable", Style.hash("Kind of Blue") == Style.hash("Kind of Blue") and Style.hash("a") ~= Style.hash("b"))
@@ -221,6 +245,49 @@ d:skip(1)
 check("no skip past the last song", not d:skip(1) and d.t == t4.tracks[3].start)
 d:press("ff")
 check("no skip while winding", not d:skip(-1))
+
+-- While a song's file is still being read, PLAY is down and the deck waits.
+do
+	sources = {}
+	local waits = 3
+	local dl = Deck.new({
+		open = function(path)
+			if waits > 0 then
+				waits = waits - 1
+				return nil, "pending"
+			end
+			sources[path] = fakeSource(50)
+			return sources[path], { release = function() end }
+		end,
+	})
+	dl:insert(Tape.new({ "a", "b" }), 0)
+	dl:press("play")
+	dl:update(0.2)
+	check("loading: waits for the file", dl:loading() and dl.t == 0 and not sources.a)
+	local early = dl:keysDown().play
+	dl:update(0.4)
+	check("loading: PLAY sinks and the head rises", dl:keysDown().play > early and dl:headPosition() > 0.1 and dl:headPosition() < 1)
+	dl:update(0.1)
+	dl:update(0.1)
+	check("loading: plays once ready", not dl:loading() and sources.a.playing and dl:keysDown().play == 1 and dl:headPosition() == 1)
+	waits = 2
+	dl:press("stop")
+	check("loading state ends on stop", not dl:loading())
+end
+do
+	local fetched = {}
+	local dp = Deck.new({
+		open = function(path)
+			sources[path] = fakeSource(50)
+			return sources[path], { release = function() end }
+		end,
+		prefetch = function(path) fetched[#fetched + 1] = path end,
+	})
+	dp:insert(Tape.new({ "a", "b", "c" }), 0)
+	dp:press("play")
+	dp:update(0.01)
+	check("reads the next song ahead", fetched[1] == "b")
+end
 
 -- Unreadable files are skipped as blank tape.
 d = newDeck()

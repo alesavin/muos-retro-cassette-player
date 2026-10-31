@@ -119,9 +119,11 @@ local function drawSpine(st, title, sub, x, y, lifted)
 end
 
 -- A strip of masking tape on the box with the folder's name.
-local function drawBoxLabel(text)
+-- A strip of masking tape on the box with the folder's name, and in a long
+-- box a pencilled note of where you are ("40 of 87").
+local function drawBoxLabel(text, note)
 	local f = Fonts.get("marker", 18)
-	text = ui.ellipsize(f, text, 600)
+	text = ui.ellipsize(f, text, 520)
 	local w = f:getWidth(text) + 28
 	lg.setColor(0, 0, 0, 0.25)
 	lg.rectangle("fill", 23, 11, w, 30)
@@ -130,6 +132,22 @@ local function drawBoxLabel(text)
 	lg.setFont(f)
 	lg.setColor(0.10, 0.10, 0.10)
 	lg.print(text, 34, 10)
+	if note then
+		lg.setFont(Fonts.get("pen", 20))
+		lg.setColor(0.80, 0.76, 0.68, 0.85)
+		lg.print(note, 20 + w + 14, 9)
+	end
+end
+
+-- An index card standing between the tapes where a new letter starts.
+local function drawDivider(letter, y)
+	lg.setColor(0, 0, 0, 0.3)
+	lg.rectangle("fill", 688, y + 3, 30, 28, 4, 4)
+	lg.setColor(0.97, 0.95, 0.88)
+	lg.rectangle("fill", 685, y, 30, 28, 4, 4)
+	lg.setFont(Fonts.get("marker", 18))
+	lg.setColor(0.70, 0.10, 0.10)
+	lg.printf(letter, 685, y + 1, 30, "center")
 end
 
 local function drawNote(text)
@@ -175,12 +193,46 @@ function View:draw(browser)
 		if e.kind == "file" then
 			drawSpine(View.tapeStyle(e.path), View.songTitle(e.path), string.format("%02d", songNo[i]), x, y, i == browser.sel)
 		else
-			local name = browser.path and e.name or e.path
-			drawSpine(Style.of(fs.basename(e.path)), ui.safe(name), nil, x, y, i == browser.sel)
+			-- At the top level the folders are the cards' MUSIC folders: name them by card.
+			local name = browser.path and e.name or fs.rootLabel(e.path)
+			drawSpine(Style.of(browser.path and fs.basename(e.path) or name), ui.safe(name), nil, x, y, i == browser.sel)
 		end
 	end
 
-	drawBoxLabel(ui.safe(browser.path and fs.basename(browser.path) or "MUSIC"))
+	-- In a long box of albums, divider cards mark where each letter starts.
+	local long = browser:isLong()
+	if long and browser.path then
+		for i = first, math.min(#entries, first + Browser.ROWS + 2) do
+			local e = entries[i]
+			if e.kind == "dir" then
+				local letter = Browser.initial(e.name)
+				if i == 1 or entries[i - 1].kind ~= "dir" or Browser.initial(entries[i - 1].name) ~= letter then
+					drawDivider(ui.safe(letter), STACK_Y + (i - self.offset) * PITCH - 6)
+				end
+			end
+		end
+	end
+
+	-- Top edge of the box, behind the label, so a tape scrolled off the top
+	-- doesn't show through it.
+	lg.setColor(0.30, 0.22, 0.15)
+	lg.rectangle("fill", 0, 0, W, 40)
+	lg.setColor(0, 0, 0, 0.18)
+	lg.rectangle("fill", 0, 40, W, 3)
+
+	local box = "MUSIC"
+	if browser.path then
+		box = browser:isRoot(browser.path) and fs.rootLabel(browser.path) or fs.basename(browser.path)
+	end
+	local note
+	local e = entries[browser.sel]
+	if long then
+		if e and e.kind == "dir" and browser.path then
+			box = box .. "  ·  " .. Browser.initial(e.name)
+		end
+		note = string.format("%d of %d", browser.sel, #entries)
+	end
+	drawBoxLabel(ui.safe(box), note)
 
 	-- Bottom edge: the keys, and the D-pad's part between them.
 	lg.setColor(0.30, 0.22, 0.15)
@@ -188,7 +240,6 @@ function View:draw(browser)
 	Keys.draw(self.keyDepth, TWINS)
 	lg.setFont(Fonts.get("print", 14))
 	lg.setColor(0.93, 0.88, 0.70, 0.75)
-	local e = entries[browser.sel]
 	local open = e and e.kind == "dir" and "     ›  open" or ""
 	lg.printf("up · down  choose" .. open, 210, 452, 300, "center")
 end

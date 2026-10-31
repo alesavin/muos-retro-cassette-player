@@ -4,6 +4,7 @@ local Durations = require("lib.durations")
 local Frame = require("lib.frame")
 local Input = require("lib.input")
 local LibraryView = require("lib.library_view")
+local Loader = require("lib.loader")
 local Scaler = require("lib.scaler")
 local Settings = require("lib.settings")
 local Sfx = require("lib.sfx")
@@ -35,7 +36,8 @@ local function insertTape(paths, index)
 	Settings.save()
 end
 
--- The library uses the player's keys: L1/R1 flip a pile of tapes, R2 (PLAY)
+-- The library uses the player's keys: L1/R1 jump a letter among albums (a pile
+-- of tapes among songs), R2 (PLAY)
 -- or A puts the tape in, L2 (STOP), B or D-pad left goes back up, D-pad right
 -- opens an album to show its songs.
 local function libraryAction(action, isRepeat)
@@ -46,9 +48,9 @@ local function libraryAction(action, isRepeat)
 	elseif isRepeat then
 		return
 	elseif action == "l1" then
-		browser:move(-Browser.ROWS, false)
+		browser:flip(-1)
 	elseif action == "r1" then
-		browser:move(Browser.ROWS, false)
+		browser:flip(1)
 	elseif action == "right" then
 		browser:openSelection()
 	elseif action == "r2" or action == "a" then
@@ -111,6 +113,7 @@ function love.load()
 	Scaler.init(Walkman.WIDTH, Walkman.HEIGHT)
 	Sfx.init()
 	Durations.init()
+	Loader.init()
 
 	deck = Deck.new({ onClunk = clunk })
 	deck:setVolume(1) -- the device's volume buttons set the level
@@ -142,7 +145,7 @@ function love.update(dt)
 		speed = deck:tapeSpeed(),
 		progress = deck:progress(),
 		keys = keys,
-		headEngaged = deck:headEngaged(),
+		head = deck:headPosition(),
 	})
 	library:update(dt, browser, libraryKeys())
 	Sfx.update(deck)

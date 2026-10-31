@@ -47,8 +47,10 @@ fi
 
 # Where to look for music: the MUSIC folder on each SD card.
 if command -v GET_VAR >/dev/null 2>&1; then
-	RC_MUSIC_MOUNTS="$(GET_VAR "device" "storage/sdcard/mount"):$(GET_VAR "device" "storage/rom/mount")"
-	export RC_MUSIC_MOUNTS
+	RC_SD1_MOUNT="$(GET_VAR "device" "storage/rom/mount")"
+	RC_SD2_MOUNT="$(GET_VAR "device" "storage/sdcard/mount")"
+	RC_MUSIC_MOUNTS="$RC_SD1_MOUNT:$RC_SD2_MOUNT"
+	export RC_SD1_MOUNT RC_SD2_MOUNT RC_MUSIC_MOUNTS
 fi
 
 export SDL_GAMECONTROLLERCONFIG_FILE="/usr/lib/gamecontrollerdb.txt"

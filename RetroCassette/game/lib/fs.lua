@@ -6,7 +6,7 @@ fs.AUDIO_EXT = { mp3 = true, ogg = true, oga = true, flac = true, wav = true }
 
 -- Default SD card mount points. On muOS the launcher passes the device's real
 -- ones in RC_MUSIC_MOUNTS (colon-separated); RC_MUSIC_DIR overrides everything.
-fs.DEFAULT_MOUNTS = { "/mnt/sdcard", "/mnt/mmc" }
+fs.DEFAULT_MOUNTS = { "/mnt/mmc", "/mnt/sdcard" }
 
 local function quote(s)
 	return "'" .. (s:gsub("'", "'\\''")) .. "'"
@@ -91,6 +91,28 @@ function fs.readAll(p)
 	local data = f:read("*a")
 	f:close()
 	return data
+end
+
+-- The card slots as muOS names them. The launcher passes the device's mount
+-- points; the defaults are muOS's usual ones.
+fs.SLOTS = {
+	{ label = "SD1", env = "RC_SD1_MOUNT", default = "/mnt/mmc" },
+	{ label = "SD2", env = "RC_SD2_MOUNT", default = "/mnt/sdcard" },
+	{ label = "USB", default = "/mnt/usb" },
+}
+
+-- "SD1 · MUSIC" for a folder on the first card, and so on; other paths as given.
+function fs.rootLabel(path)
+	for _, slot in ipairs(fs.SLOTS) do
+		local mount = slot.env and os.getenv(slot.env)
+		if not mount or mount == "" then
+			mount = slot.default
+		end
+		if path == mount or path:sub(1, #mount + 1) == mount .. "/" then
+			return slot.label .. " · " .. fs.basename(path)
+		end
+	end
+	return path
 end
 
 -- The MUSIC folder of each mount, without duplicates, in order.

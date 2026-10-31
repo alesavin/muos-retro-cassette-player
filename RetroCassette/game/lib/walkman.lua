@@ -22,11 +22,15 @@ local C = {
 
 Walkman.WIDTH, Walkman.HEIGHT = 720, 480
 
+-- The other button that works each key, printed under its symbol as in the library.
+Walkman.TWINS = { stop = "B", play = "A" }
+
 -- The cassette is drawn in its own 500x316 coordinates (origin at SHELL) and
--- scaled up to fill the screen.
-Walkman.CASSETTE_SCALE = 1.3
+-- scaled up to fill the screen: centred, and as large as its height allows
+-- above the keys (a cassette is narrower for its height than the screen).
+Walkman.CASSETTE_SCALE = 1.37
 local DPI = Walkman.CASSETTE_SCALE
-local CASSETTE_X, CASSETTE_Y = 48, 8
+local CASSETTE_X, CASSETTE_Y = 17, 5
 local SHELL = { x = 70, y = 96, w = 500, h = 316 }
 local LABEL = { x = 96, y = 116, w = 448, h = 196 }
 local WINDOW = { x = 186, y = 182, w = 268, h = 76 }
@@ -65,12 +69,12 @@ local function approach(current, target, rate, dt)
 	return v, true
 end
 
--- state: { speed, progress, keys = {rew, stop, play, ff} (0..1), headEngaged }
+-- state: { speed, progress, keys = {rew, stop, play, ff} (0..1), head (0..1) }
 function Walkman:update(dt, state)
 	local m1, m2, m
 	-- Ease toward the real position so a new tape or a jump winds visibly.
 	self.shown, m1 = approach(self.shown, state.progress, 8, dt)
-	self.head, m2 = approach(self.head, state.headEngaged and 1 or 0, 20, dt)
+	self.head, m2 = approach(self.head, state.head, 20, dt)
 	local moving = m1 or m2 or state.speed ~= 0
 	for _, k in ipairs(Keys.LAYOUT) do
 		self.keyDepth[k.name], m = approach(self.keyDepth[k.name], state.keys[k.name] or 0, 30, dt)
@@ -277,7 +281,7 @@ function Walkman:draw(info)
 	lg.setColor(1, 1, 1, 0.03)
 	lg.polygon("fill", 560, 0, 585, 0, 355, H, 330, H)
 
-	Keys.draw(self.keyDepth)
+	Keys.draw(self.keyDepth, Walkman.TWINS)
 end
 
 return Walkman

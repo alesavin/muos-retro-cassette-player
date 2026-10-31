@@ -37,6 +37,13 @@ are named `RetroCassette`, so updates install over the earlier version.
   half-way while paused, and FF or REW stays down while winding. They pop up
   with a clunk at the end of the tape.
 - **Volume** is the device's own volume buttons.
+- **A long box shows where you are:** the box label names the letter you're
+  in and a pencil note says "40 of 87", and A–Z divider cards stand between
+  the albums where each letter starts.
+- **Two cards** show up as **SD1 · MUSIC** and **SD2 · MUSIC**.
+- **Loading:** songs are read in the background. While a big file loads,
+  PLAY sinks and the head rises slowly, like a motor starting; the next song
+  is read ahead so moving on is quick.
 - **Pocket mode:** after 30 seconds without a button press the screen goes
   dark; music keeps playing. Any button wakes it (that press does nothing else).
 
@@ -54,7 +61,7 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
 
-A works as PLAY and B as STOP. D-pad left / right jumps straight to the
+A works as PLAY and B as STOP (printed under those keys). D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay
 real REW / FF.
 
@@ -64,7 +71,7 @@ printed on it:
 | Button | Twin | Library |
 | --- | --- | --- |
 | D-pad up/down | | Previous / next tape |
-| L1 / R1 | | A pile of tapes back / forward |
+| L1 / R1 | | Among albums: jump to the previous / next letter. Among songs: a pile of tapes back / forward |
 | R2 (PLAY) | A | Put the tape in and play: an album from its first song, a song from that song |
 | L2 (STOP) | B, D-pad left | Back up a folder |
 | D-pad right | | Open an album to see its songs |
@@ -78,7 +85,7 @@ Space = Start, Esc = quit.
 
 Put a `MUSIC` folder at the top of an SD card, with one folder per album. The
 app asks muOS where the SD cards are mounted and shows each card's `MUSIC`
-folder that exists (usually `/mnt/sdcard/MUSIC` and `/mnt/mmc/MUSIC`).
+folder that exists (usually `/mnt/mmc/MUSIC` on SD1 and `/mnt/sdcard/MUSIC` on SD2; with both, the top level shows them as **SD1 · MUSIC** and **SD2 · MUSIC**).
 
 > **Switch the device off before taking an SD card out** to add music. muOS
 > sets up its storage when it starts, so a card pulled out and put back while
@@ -140,6 +147,8 @@ RetroCassette/            what gets installed on the device
     lib/tapeart.lua       drawing shared by spines and the cassette
     lib/fonts.lua         label fonts (assets/fonts, free licences)
     lib/frame.lua         frame pacing and pocket mode
+    lib/keys.lua          the transport keys, shared by player and library
+    lib/loader.lua        reads song files on a background thread
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
     lib/sfx.lua           generated hiss, winding whir and key clunk
