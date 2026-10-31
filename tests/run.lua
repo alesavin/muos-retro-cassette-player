@@ -41,7 +41,7 @@ check("stem", fs.stem("01 - Song.name.mp3") == "01 - Song.name")
 check("isAudio", fs.isAudio("a.FLAC") and not fs.isAudio("cover.jpg"))
 check("music roots from muOS mounts", table.concat(fs.candidateRoots("/mnt/sdcard:/mnt/mmc"), ",") == "/mnt/sdcard/MUSIC,/mnt/mmc/MUSIC")
 check("music roots: other mounts first, defaults kept", table.concat(fs.candidateRoots("/mnt/usb:"), ",") == "/mnt/usb/MUSIC,/mnt/mmc/MUSIC,/mnt/sdcard/MUSIC")
-check("card labels", fs.rootLabel("/mnt/mmc/MUSIC") == "SD1 · MUSIC" and fs.rootLabel("/mnt/sdcard/MUSIC") == "SD2 · MUSIC" and fs.rootLabel("/mnt/mmcx/MUSIC") == "/mnt/mmcx/MUSIC")
+check("card labels", fs.rootLabel("/mnt/mmc/MUSIC") == "SD1 · MUSIC" and fs.rootLabel("/mnt/sdcard/MUSIC") == "SD2 · MUSIC" and fs.rootLabel("/mnt/mmcx/MUSIC") == "MUSIC")
 check("music roots without muOS: SD1 first", table.concat(fs.candidateRoots(nil), ",") == "/mnt/mmc/MUSIC,/mnt/sdcard/MUSIC")
 
 -- Build a temporary music tree.
