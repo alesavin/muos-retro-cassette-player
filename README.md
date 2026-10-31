@@ -173,6 +173,10 @@ Retro Cassette Player is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License, version 3, as published
 by the Free Software Foundation. It is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; see [LICENSE](LICENSE) for details.
+This also applies to all earlier versions (0.1.0 to 0.3.2), which were
+published before the LICENSE file was added.
 
 The bundled label fonts keep their own licences (SIL Open Font Licence and
-Apache 2.0); see [RetroCassette/game/assets/fonts](RetroCassette/game/assets/fonts).
+Apache 2.0) and are by Font Diner, Indian Type Foundry, Astigmatic, Vernon
+Adams, Kalapi Gajjar, Cyreal and Peter Hull; see
+[RetroCassette/game/assets/fonts](RetroCassette/game/assets/fonts).
