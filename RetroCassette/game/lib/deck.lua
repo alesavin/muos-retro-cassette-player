@@ -7,7 +7,7 @@
 --   PLAY         while playing, pauses (the key stays half-way down); again resumes
 --   STOP         releases every key; pressed again while stopped, opens the lid
 --   skip         (D-pad) jumps straight to the previous / next song
-local fs = require("lib.fs")
+local Loader = require("lib.loader")
 
 local Deck = {}
 Deck.__index = Deck
@@ -18,18 +18,18 @@ Deck.TAP_TIME = 0.3
 -- How long the reels whir after a skip.
 Deck.SKIP_TIME = 0.35
 
+-- Returns a stream source and the FileData it reads from (kept alive with it),
+-- or nil and "pending" while lib/loader.lua is still reading the file, or nil
+-- and "failed".
 local function openSource(path)
-	local data = fs.readAll(path)
-	if not data then
-		return nil
+	local fd, err = Loader.fetch(path)
+	if not fd then
+		return nil, err
 	end
-	local ok, fd, src = pcall(function()
-		-- The stream reads from this FileData, so it has to stay alive with the source.
-		local fd = love.filesystem.newFileData(data, fs.basename(path))
-		return fd, love.audio.newSource(fd, "stream")
-	end)
+	local ok, src = pcall(love.audio.newSource, fd, "stream")
 	if not ok then
-		return nil
+		fd:release()
+		return nil, "failed"
 	end
 	return src, fd
 end
@@ -38,6 +38,7 @@ function Deck.new(opts)
 	opts = opts or {}
 	local self = setmetatable({}, Deck)
 	self.open = opts.open or openSource
+	self.prefetch = opts.prefetch or (opts.open and function() end) or Loader.prefetch
 	self.onClunk = opts.onClunk or function() end
 	self.tape = nil
 	self.t = 0 -- position on the tape, in seconds
@@ -66,6 +67,7 @@ function Deck:silence()
 		self.source:pause()
 	end
 	self.started = false
+	self.loadingSince = nil
 end
 
 function Deck:insert(tape, t)
@@ -206,23 +208,34 @@ function Deck:release(key)
 	end
 end
 
+-- Returns "ok", "pending" while the file is still being read, or "bad".
 function Deck:loadSource(i)
 	self:unloadSource()
 	local tr = self.tape.tracks[i]
 	if tr.bad then
-		return false
+		return "bad"
 	end
 	local src, fd = self.open(tr.path)
 	if not src then
+		if fd == "pending" then
+			self.loadingSince = self.loadingSince or self.clock
+			return "pending"
+		end
+		self.loadingSince = nil
 		self.tape:markBad(i)
-		return false
+		return "bad"
 	end
+	self.loadingSince = nil
 	self.source, self.fileData, self.srcIndex, self.started = src, fd, i, false
 	local d = src:getDuration()
 	if d and d > 0 then
 		self.tape:setDuration(i, d)
 	end
-	return true
+	local nextTrack = self.tape.tracks[i + 1]
+	if nextTrack then
+		self.prefetch(nextTrack.path)
+	end
+	return "ok"
 end
 
 function Deck:updatePlay(dt)
@@ -234,8 +247,10 @@ function Deck:updatePlay(dt)
 	local rate = self.hold == 1 and Deck.CUE_RATE or 1
 	local i, offset, blank = tape:locate(self.t)
 	if not blank and self.srcIndex ~= i then
-		if not self:loadSource(i) then
-			return -- the track now has no length; the next update moves past it
+		if self:loadSource(i) ~= "ok" then
+			-- Still reading the file: wait. Unreadable: the track now has no
+			-- length, and the next update moves past it.
+			return
 		end
 		self:resync()
 		i, offset, blank = tape:locate(self.t)
@@ -340,7 +355,9 @@ end
 function Deck:keysDown()
 	local ams = self.mode == "ams"
 	local play = 0
-	if self.mode == "play" or ams then
+	if self:loading() then
+		play = 0.3 + 0.6 * self:loadingTravel()
+	elseif self.mode == "play" or ams then
 		play = 1
 	elseif self.mode == "pause" then
 		play = 0.5
@@ -355,6 +372,25 @@ end
 -- The head touches the tape while playing or paused.
 function Deck:headEngaged()
 	return self.mode == "play" or self.mode == "pause" or self.mode == "ams"
+end
+
+-- True while PLAY is down but the song's file is still being read.
+function Deck:loading()
+	return self.mode == "play" and self.loadingSince ~= nil
+end
+
+-- How far the motor has got while loading (0 -> 1): PLAY sinks and the head
+-- rises as if the motor were starting, and both settle once the song plays.
+function Deck:loadingTravel()
+	return 1 - math.exp(-1.5 * (self.clock - self.loadingSince))
+end
+
+-- Head position, 0 (pulled back) .. 1 (against the tape).
+function Deck:headPosition()
+	if self:loading() then
+		return 0.1 + 0.8 * self:loadingTravel()
+	end
+	return self:headEngaged() and 1 or 0
 end
 
 -- Title of the song under the head (or the next one while on blank tape).

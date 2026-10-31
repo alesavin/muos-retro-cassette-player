@@ -123,6 +123,72 @@ function Browser:activate()
 	return queue, index
 end
 
+-- The letter a name files under: A-Z upper-cased, "#" for digits and other
+-- ASCII, and the first character itself for other scripts.
+function Browser.initial(name)
+	local c = name:match("^[%z\1-\127\194-\244][\128-\191]*") or ""
+	if c:match("^%a$") then
+		return c:upper()
+	elseif #c <= 1 then
+		return "#"
+	end
+	return c
+end
+
+local function letterAt(self, i)
+	return Browser.initial(self.entries[i].name)
+end
+
+-- Jumps to the first tape of the next letter (dir 1), or to the first of this
+-- letter / the previous letter (dir -1), and shows it at the top of the stack.
+function Browser:jumpLetter(dir)
+	local n = #self.entries
+	if n == 0 then
+		return
+	end
+	local i = self.sel
+	local cur = letterAt(self, i)
+	if dir > 0 then
+		while i < n and letterAt(self, i) == cur do
+			i = i + 1
+		end
+		if letterAt(self, i) == cur then
+			i = self.sel -- no later letter
+		end
+	else
+		local j = i
+		while j > 1 and letterAt(self, j - 1) == cur do
+			j = j - 1
+		end
+		if j == i and i > 1 then
+			local prev = letterAt(self, i - 1)
+			j = i - 1
+			while j > 1 and letterAt(self, j - 1) == prev do
+				j = j - 1
+			end
+		end
+		i = j
+	end
+	self.sel = i
+	self.top = math.max(1, math.min(i, n - Browser.ROWS + 1))
+	self:scrollToSelection()
+end
+
+-- L1/R1: among albums, jump by letter; among songs, flip a pile of tapes.
+function Browser:flip(dir)
+	local e = self.entries[self.sel]
+	if e and e.kind == "dir" then
+		self:jumpLetter(dir)
+	else
+		self:move(dir * Browser.ROWS, false)
+	end
+end
+
+-- True when the stack is longer than the screen, so it's worth showing where you are.
+function Browser:isLong()
+	return #self.entries > Browser.ROWS
+end
+
 -- Opens the selected folder; does nothing on a song. Returns true if opened.
 function Browser:openSelection()
 	local e = self.entries[self.sel]
