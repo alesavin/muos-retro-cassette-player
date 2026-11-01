@@ -22,7 +22,7 @@ local C = {
 
 Walkman.WIDTH, Walkman.HEIGHT = 720, 480
 
--- Other buttons that do what each key does, shown as badges on the key. The
+-- Other buttons that do what each key does, printed small beside the symbol. The
 -- D-pad skips straight to the previous / next song, as a tap on REW / FF does
 -- by winding there.
 Walkman.TWINS = { rew = { "‹" }, stop = { "B" }, play = { "A" }, ff = { "›" } }

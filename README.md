@@ -62,7 +62,7 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched; after 2 s it winds at 10x, after 5 s at 30x (muted) |
 
-A works as PLAY and B as STOP; the keys show these twins as round badges. D-pad left / right jumps straight to the
+A works as PLAY and B as STOP; the keys show these twins in small print. D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay
 real REW / FF.
 

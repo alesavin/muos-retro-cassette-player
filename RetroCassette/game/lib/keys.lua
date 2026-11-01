@@ -17,7 +17,7 @@ Keys.LAYOUT = {
 
 local W, TOP, TRAVEL = 110, 444, 16
 local ICON = 18 -- symbol size
-local BADGE = 11 -- radius of a twin button badge
+local TWIN_SIZE = 13 -- the optional twin buttons are printed small and grey
 
 -- Width of a key's symbol(s).
 local function symbolWidth(name)
@@ -41,18 +41,8 @@ local function symbol(name, x, y)
 	end
 end
 
--- A round badge with a button's name, like the printing on a real key.
-local function badge(label, cx, cy)
-	lg.setColor(0.35, 0.36, 0.38)
-	lg.circle("fill", cx, cy, BADGE)
-	lg.setColor(0.86, 0.87, 0.89)
-	local f = Fonts.get("print", 17)
-	lg.setFont(f)
-	lg.printf(label, cx - BADGE, cy - f:getHeight() / 2 - 1, BADGE * 2, "center")
-end
-
 -- depth[name]: 0 up .. 1 fully down. twins[name]: a list of other buttons that
--- do the same thing, each drawn as a badge beside the symbol (optional).
+-- do the same thing, printed small and grey beside the symbol (optional).
 function Keys.draw(depth, twins)
 	for _, k in ipairs(Keys.LAYOUT) do
 		local top = TOP + (depth[k.name] or 0) * TRAVEL
@@ -60,16 +50,17 @@ function Keys.draw(depth, twins)
 		lg.rectangle("fill", k.x, top, W, 60, 6, 6)
 		lg.setColor(0.80, 0.81, 0.83)
 		lg.rectangle("fill", k.x + 2, top, W - 4, 54, 6, 6)
-		local list = twins and twins[k.name] or {}
-		local width = symbolWidth(k.name) + #list * (BADGE * 2 + 5)
+		local twin = twins and twins[k.name] and table.concat(twins[k.name], " ")
+		local f = Fonts.get("print", TWIN_SIZE)
+		local width = symbolWidth(k.name) + (twin and f:getWidth(twin) + 7 or 0)
 		local x = k.x + (W - width) / 2
 		local cy = top + 18
 		lg.setColor(0.30, 0.31, 0.33)
 		symbol(k.name, x, cy - ICON / 2)
-		x = x + symbolWidth(k.name) + 6
-		for _, label in ipairs(list) do
-			badge(label, x + BADGE, cy)
-			x = x + BADGE * 2 + 5
+		if twin then
+			lg.setFont(f)
+			lg.setColor(0.45, 0.46, 0.48)
+			lg.print(twin, x + symbolWidth(k.name) + 7, cy - f:getHeight() / 2)
 		end
 	end
 end

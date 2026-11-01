@@ -18,8 +18,8 @@ local SPINE_X, SPINE_W, SPINE_H = 40, 600, 38
 local STACK_Y, PITCH = 44, 43
 local SLIDE = 40
 
--- The player's keys at the bottom, with badges for the buttons that do the
--- same: L1/R1 jump a letter, L2 (B, ‹) goes back up, R2 (A) plays.
+-- The player's keys at the bottom, with the buttons that do the same printed
+-- small beside each symbol: L1/R1 jump a letter, L2 (B, ‹) goes back up, R2 (A) plays.
 local TWINS = { stop = { "B", "‹" }, play = { "A" } }
 
 -- "03 - Song Name.mp3" -> "Song Name"
