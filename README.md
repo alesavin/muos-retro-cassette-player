@@ -25,8 +25,8 @@ are named `RetroCassette`, so updates install over the earlier version.
 
 - **A folder is one side of a tape.** Its songs are recorded one after another
   with a few seconds of blank tape between them. The reels show how far you are
-  through the whole album, and the minute marks on the cassette window show the
-  time: read it where the edge of the right-hand tape pack sits.
+  through the whole album, and between them the window shows the time played
+  (white) and remaining (amber) on the side, which helps most with long mixes.
 - **The library is a box of tapes.** Each album folder, and each song inside
   one, is a cassette lying in a stack with its spine facing you.
 - **Every tape has its own look**, chosen from its folder's name: shell colour,

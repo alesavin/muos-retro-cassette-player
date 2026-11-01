@@ -169,6 +169,35 @@ local function drawScale(tapeLength)
 	end
 end
 
+-- "12:40", or "1:02:40" past an hour.
+local function clock(t)
+	t = math.max(0, math.floor(t + 0.5))
+	local h, m, sec = math.floor(t / 3600), math.floor(t / 60) % 60, t % 60
+	if h > 0 then
+		return string.format("%d:%02d:%02d", h, m, sec)
+	end
+	return string.format("%d:%02d", m, sec)
+end
+
+-- Played (white) over remaining (amber) time on the tape side, printed in the
+-- gap between the two tape packs, centred on it as the packs grow and shrink.
+local function drawTimes(position, length, rl, rr)
+	if not length or length <= 0 then
+		return
+	end
+	local cx = (HUB_L + rl + HUB_R - rr) / 2
+	local f = Fonts.get("dotmatrix", 15, DPI)
+	lg.setFont(f)
+	local function line(text, y, c)
+		lg.setColor(0, 0, 0, 0.7)
+		lg.printf(text, cx - 40 + 1, y + 1, 80, "center")
+		lg.setColor(c[1], c[2], c[3])
+		lg.printf(text, cx - 40, y, 80, "center")
+	end
+	line(clock(position), HUB_Y - 17, { 1, 1, 1 })
+	line("-" .. clock(length - position), HUB_Y + 1, { 1, 0.85, 0.45 })
+end
+
 -- Prints text in the style's font and ink, shrunk to fit w and cut short if
 -- still too long; handwriting sits at the style's tilt.
 local function writeOnLabel(st, text, x, y, w, size)
@@ -220,6 +249,7 @@ function Walkman:drawCassette(info)
 	drawHub(HUB_L, HUB_Y, self.angleL)
 	drawHub(HUB_R, HUB_Y, self.angleR)
 	drawScale(info.tapeLength)
+	drawTimes(info.position, info.tapeLength, rl, rr)
 	lg.setColor(1, 1, 1, 0.07)
 	lg.polygon(
 		"fill",
@@ -262,7 +292,7 @@ function Walkman:drawCassette(info)
 	drawScrew(st, 320, 356)
 end
 
--- info: { title, subtitle, tapeLength, style }
+-- info: { title, subtitle, tapeLength, position (seconds into the tape), style }
 function Walkman:draw(info)
 	local W, H = Walkman.WIDTH, Walkman.HEIGHT
 	setColor(C.interior)

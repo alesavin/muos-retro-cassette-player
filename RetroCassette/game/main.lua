@@ -166,6 +166,7 @@ function love.draw()
 			title = track and LibraryView.songTitle(track.path) or "",
 			subtitle = track and ui.safe(fs.basename(fs.parent(track.path))) or "",
 			tapeLength = deck.tape and deck.tape.length,
+			position = deck.t,
 			style = LibraryView.tapeStyle(track and track.path or ""),
 		})
 	else
