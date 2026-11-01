@@ -63,13 +63,8 @@ for MALI in /usr/lib/libmali.so /usr/lib/aarch64-linux-gnu/libmali.so; do
 	fi
 done
 
-# Settings are kept next to the app. LÖVE's own save folder goes to /tmp (RAM),
-# because SD cards (FAT/exFAT) can't hold the symlinks the app streams songs
-# through; if /tmp isn't writable it falls back to the data folder.
-export RC_DATA_DIR="$DATA_DIR"
-LOVE_SAVE="/tmp/retrocassette"
-mkdir -p "$LOVE_SAVE" 2>/dev/null || LOVE_SAVE="$DATA_DIR"
-export XDG_DATA_HOME="$LOVE_SAVE"
+# Keep settings next to the app instead of in the shared home folder.
+export XDG_DATA_HOME="$DATA_DIR"
 export RC_FULLSCREEN=1
 
 # Keep the device awake while the tape plays.

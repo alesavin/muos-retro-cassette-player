@@ -24,6 +24,7 @@ local Deck = require("lib.deck")
 local Tape = require("lib.tape")
 local Style = require("lib.style")
 local Probe = require("lib.probe")
+local Memory = require("lib.memory")
 
 local failures, count = 0, 0
 local function check(name, cond)
@@ -110,6 +111,22 @@ do
 	os.remove(wav)
 	os.remove(flac)
 	os.remove(mp3)
+end
+
+-- Memory guard: a song may take at most 40% of the free memory.
+do
+	local path = os.tmpname()
+	local f = io.open(path, "wb"); f:write(string.rep("x", 1000)); f:close()
+	local available = Memory.available
+	Memory.available = function() return 2600 end
+	check("memory: fits", Memory.fits(path))
+	Memory.available = function() return 2400 end
+	check("memory: too big is skipped", not Memory.fits(path))
+	Memory.available = function() return nil end
+	check("memory: unknown free memory allows it", Memory.fits(path))
+	check("memory: missing file fails", not Memory.fits(path .. ".missing"))
+	Memory.available = available
+	os.remove(path)
 end
 
 -- Letter jumps

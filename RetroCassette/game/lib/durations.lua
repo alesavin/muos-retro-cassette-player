@@ -1,8 +1,6 @@
 -- Reads track lengths on a background thread so the reels and the window scale
 -- can show the whole tape without stalling the screen. Lengths come from file
 -- headers (lib/probe.lua); only small files are ever decoded to find them.
-local Media = require("lib.media")
-
 local Durations = {}
 
 local THREAD = [[
@@ -25,7 +23,10 @@ while true do
 		end
 		if size <= maxDecode then
 			local ok, res = pcall(function()
-				return love.sound.newDecoder(job.link or job.path):getDuration()
+				local f = io.open(job.path, "rb")
+				local data = f:read("*a")
+				f:close()
+				return love.sound.newDecoder(love.filesystem.newFileData(data, job.name)):getDuration()
 			end)
 			d = ok and res or nil
 		end
@@ -72,7 +73,6 @@ function Durations.probe(tape)
 			tape = generation,
 			index = i,
 			path = tr.path,
-			link = Media.link(tr.path),
 			name = tr.path:match("([^/]+)$"),
 		})
 	end

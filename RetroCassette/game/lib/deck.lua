@@ -9,7 +9,7 @@
 --   STOP         releases every key; pressed again while stopped, opens the lid
 --   skip         (D-pad) jumps straight to the previous / next song
 local Loader = require("lib.loader")
-local Media = require("lib.media")
+local Memory = require("lib.memory")
 
 local Deck = {}
 Deck.__index = Deck
@@ -24,20 +24,11 @@ Deck.TAP_TIME = 0.3
 -- How long the reels whir after a skip.
 Deck.SKIP_TIME = 0.35
 
--- Returns a stream source and the FileData it reads from, if any (kept alive
--- with it), or nil and "pending" while lib/loader.lua is still reading the
--- file, or nil and "failed". Songs are opened through a link (lib/media.lua)
--- when possible, and refused when they wouldn't fit in memory.
+-- Returns a stream source and the FileData it plays from (kept alive with it),
+-- or nil and "pending" while lib/loader.lua is still reading the file, or nil
+-- and "failed". Songs too big for the free memory fail (lib/memory.lua).
 local function openSource(path)
-	if not Media.fits(path) then
-		return nil, "failed"
-	end
-	local link = Media.link(path)
-	if link then
-		local ok, src = pcall(love.audio.newSource, link, "stream")
-		if ok then
-			return src
-		end
+	if not Memory.fits(path) then
 		return nil, "failed"
 	end
 	local fd, err = Loader.fetch(path)
@@ -52,11 +43,20 @@ local function openSource(path)
 	return src, fd
 end
 
+-- Starts reading a song that's coming up, if it's small enough to hold
+-- alongside the one playing.
+local function prefetch(path)
+	local size = Memory.size(path)
+	if size and size <= Memory.READ_AHEAD_MAX then
+		Loader.prefetch(path)
+	end
+end
+
 function Deck.new(opts)
 	opts = opts or {}
 	local self = setmetatable({}, Deck)
 	self.open = opts.open or openSource
-	self.prefetch = opts.prefetch or (opts.open and function() end) or Loader.prefetch
+	self.prefetch = opts.prefetch or (opts.open and function() end) or prefetch
 	self.onClunk = opts.onClunk or function() end
 	self.tape = nil
 	self.t = 0 -- position on the tape, in seconds
@@ -253,9 +253,8 @@ function Deck:loadSource(i)
 			self.tape:setDuration(i, d)
 		end
 	end
-	-- Read the next song ahead, unless songs stream (then there's nothing to read).
 	local nextTrack = self.tape.tracks[i + 1]
-	if nextTrack and fd then
+	if nextTrack then
 		self.prefetch(nextTrack.path)
 	end
 	return "ok"

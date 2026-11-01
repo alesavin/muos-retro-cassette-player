@@ -41,10 +41,12 @@ are named `RetroCassette`, so updates install over the earlier version.
   in and a pencil note says "40 of 87", and A–Z divider cards stand between
   the albums where each letter starts.
 - **Two cards** show up as **SD1 · MUSIC** and **SD2 · MUSIC**.
-- **Loading:** song lengths are read from file headers, so even hour-long
-  mixes don't have to be loaded to measure them. A song is opened straight
-  from the card; one too big for the free memory is skipped like an
-  unreadable file instead of crashing the app.
+- **Loading:** songs load in the background, so the screen never freezes;
+  while a big file loads, PLAY sinks and the head rises like a motor
+  starting. The next song is read ahead. Song lengths come from file headers,
+  so even hour-long mixes don't have to be loaded to measure them. A song too
+  big for the free memory is skipped like an unreadable file instead of
+  crashing the app.
 - **Pocket mode:** after 30 seconds without a button press the screen goes
   dark; music keeps playing. Any button wakes it (that press does nothing else).
 
@@ -149,9 +151,9 @@ RetroCassette/            what gets installed on the device
     lib/fonts.lua         label fonts (assets/fonts, free licences)
     lib/frame.lua         frame pacing and pocket mode
     lib/keys.lua          the transport keys, shared by player and library
-    lib/media.lua         opens songs from the card (links in LÖVE's save folder)
+    lib/loader.lua        reads songs on a background thread, 1 MB at a time
+    lib/memory.lua        checks a song fits in the free memory
     lib/probe.lua         song lengths from file headers
-    lib/loader.lua        fallback: reads songs into memory on a background thread
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
     lib/sfx.lua           generated hiss, winding whir and key clunk

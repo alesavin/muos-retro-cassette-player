@@ -5,7 +5,6 @@ local Frame = require("lib.frame")
 local Input = require("lib.input")
 local LibraryView = require("lib.library_view")
 local Loader = require("lib.loader")
-local Media = require("lib.media")
 local Scaler = require("lib.scaler")
 local Settings = require("lib.settings")
 local Sfx = require("lib.sfx")
@@ -82,6 +81,7 @@ local function deckAction(action)
 	local key = KEY_FOR_ACTION[action]
 	if key and deck:press(key) == "eject" then
 		deck:eject()
+		Loader.clear()
 		clunk()
 		screen = "library"
 	end
@@ -113,7 +113,6 @@ function love.load()
 	Settings.load()
 	Scaler.init(Walkman.WIDTH, Walkman.HEIGHT)
 	Sfx.init()
-	Media.init()
 	Durations.init()
 	Loader.init()
 
@@ -140,6 +139,7 @@ function love.update(dt)
 	if Durations.update(deck.tape) then
 		Frame.invalidate() -- the tape's length changed: redraw the window scale
 	end
+	Loader.update()
 	deck:update(dt)
 	local keys = deck:keysDown()
 	keys.stop = (Input.isDown("l2") or Input.isDown("b")) and 1 or 0
