@@ -8,6 +8,7 @@
 --   STOP         releases every key; pressed again while stopped, opens the lid
 --   skip         (D-pad) jumps straight to the previous / next song
 local Loader = require("lib.loader")
+local Media = require("lib.media")
 
 local Deck = {}
 Deck.__index = Deck
@@ -18,10 +19,22 @@ Deck.TAP_TIME = 0.3
 -- How long the reels whir after a skip.
 Deck.SKIP_TIME = 0.35
 
--- Returns a stream source and the FileData it reads from (kept alive with it),
--- or nil and "pending" while lib/loader.lua is still reading the file, or nil
--- and "failed".
+-- Returns a stream source and the FileData it reads from, if any (kept alive
+-- with it), or nil and "pending" while lib/loader.lua is still reading the
+-- file, or nil and "failed". Songs are opened through a link (lib/media.lua)
+-- when possible, and refused when they wouldn't fit in memory.
 local function openSource(path)
+	if not Media.fits(path) then
+		return nil, "failed"
+	end
+	local link = Media.link(path)
+	if link then
+		local ok, src = pcall(love.audio.newSource, link, "stream")
+		if ok then
+			return src
+		end
+		return nil, "failed"
+	end
 	local fd, err = Loader.fetch(path)
 	if not fd then
 		return nil, err
@@ -227,12 +240,17 @@ function Deck:loadSource(i)
 	end
 	self.loadingSince = nil
 	self.source, self.fileData, self.srcIndex, self.started = src, fd, i, false
-	local d = src:getDuration()
-	if d and d > 0 then
-		self.tape:setDuration(i, d)
+	-- An MP3's length means scanning the whole file, which is left to the
+	-- background thread in lib/durations.lua; other formats know it at once.
+	if not tr.path:lower():match("%.mp3$") then
+		local d = src:getDuration()
+		if d and d > 0 then
+			self.tape:setDuration(i, d)
+		end
 	end
+	-- Read the next song ahead, unless songs stream (then there's nothing to read).
 	local nextTrack = self.tape.tracks[i + 1]
-	if nextTrack then
+	if nextTrack and fd then
 		self.prefetch(nextTrack.path)
 	end
 	return "ok"

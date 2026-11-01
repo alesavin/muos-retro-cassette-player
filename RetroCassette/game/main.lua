@@ -5,6 +5,7 @@ local Frame = require("lib.frame")
 local Input = require("lib.input")
 local LibraryView = require("lib.library_view")
 local Loader = require("lib.loader")
+local Media = require("lib.media")
 local Scaler = require("lib.scaler")
 local Settings = require("lib.settings")
 local Sfx = require("lib.sfx")
@@ -112,6 +113,7 @@ function love.load()
 	Settings.load()
 	Scaler.init(Walkman.WIDTH, Walkman.HEIGHT)
 	Sfx.init()
+	Media.init()
 	Durations.init()
 	Loader.init()
 
@@ -172,8 +174,8 @@ function love.draw()
 	Scaler.finish()
 end
 
--- LÖVE's standard loop, paced by lib/frame.lua: sleeps out each period and
--- only redraws when something changed or moves.
+-- LÖVE's standard loop, paced by lib/frame.lua: sleeps out each period, redraws
+-- when something changed or moves, and otherwise re-shows the last frame.
 function love.run()
 	love.load(love.arg.parseGameArguments(arg), arg)
 	love.timer.step()
@@ -187,10 +189,15 @@ function love.run()
 			love.handlers[name](a, b, c, d, e, f)
 		end
 		love.update(love.timer.step())
-		if love.graphics.isActive() and Frame.shouldDraw() then
+		local frame = love.graphics.isActive() and Frame.next(love.timer.getTime())
+		if frame then
 			love.graphics.origin()
 			love.graphics.clear(love.graphics.getBackgroundColor())
-			love.draw()
+			if frame == "draw" then
+				love.draw()
+			else
+				Scaler.finish() -- the last frame again, without redrawing the scene
+			end
 			love.graphics.present()
 		end
 		local rest = Frame.period() - (love.timer.getTime() - start)

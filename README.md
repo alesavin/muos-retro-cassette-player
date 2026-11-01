@@ -41,9 +41,10 @@ are named `RetroCassette`, so updates install over the earlier version.
   in and a pencil note says "40 of 87", and A–Z divider cards stand between
   the albums where each letter starts.
 - **Two cards** show up as **SD1 · MUSIC** and **SD2 · MUSIC**.
-- **Loading:** songs are read in the background. While a big file loads,
-  PLAY sinks and the head rises slowly, like a motor starting; the next song
-  is read ahead so moving on is quick.
+- **Loading:** song lengths are read from file headers, so even hour-long
+  mixes don't have to be loaded to measure them. A song is opened straight
+  from the card; one too big for the free memory is skipped like an
+  unreadable file instead of crashing the app.
 - **Pocket mode:** after 30 seconds without a button press the screen goes
   dark; music keeps playing. Any button wakes it (that press does nothing else).
 
@@ -61,7 +62,7 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
 | R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
 
-A works as PLAY and B as STOP (printed under those keys). D-pad left / right jumps straight to the
+A works as PLAY and B as STOP; the keys show these twins as round badges. D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay
 real REW / FF.
 
@@ -148,7 +149,9 @@ RetroCassette/            what gets installed on the device
     lib/fonts.lua         label fonts (assets/fonts, free licences)
     lib/frame.lua         frame pacing and pocket mode
     lib/keys.lua          the transport keys, shared by player and library
-    lib/loader.lua        reads song files on a background thread
+    lib/media.lua         opens songs from the card (links in LÖVE's save folder)
+    lib/probe.lua         song lengths from file headers
+    lib/loader.lua        fallback: reads songs into memory on a background thread
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
     lib/sfx.lua           generated hiss, winding whir and key clunk

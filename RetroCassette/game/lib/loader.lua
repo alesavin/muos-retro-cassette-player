@@ -1,21 +1,30 @@
--- Reads song files on a background thread, so the screen keeps moving while a
--- big file loads. Holds at most KEEP songs that nobody has taken yet (the next
--- song, read ahead).
+-- Fallback for when songs can't be streamed through lib/media.lua: reads song
+-- files into memory on a background thread, so the screen keeps moving while
+-- a file loads. Files over MAX bytes are refused, since holding them would
+-- risk running out of memory. Holds at most KEEP songs that nobody has taken
+-- yet (the next song, read ahead).
 local Loader = {}
 
 local THREAD = [[
 require("love.filesystem")
+local max = ...
 local requests = love.thread.getChannel("rc_load_requests")
 local results = love.thread.getChannel("rc_load_results")
 while true do
 	local path = requests:demand()
 	local f = io.open(path, "rb")
-	local data = f and f:read("*a")
+	local data
 	if f then
+		if f:seek("end") <= max then
+			f:seek("set")
+			data = f:read("*a")
+		end
 		f:close()
 	end
 	if data then
 		local ok, fd = pcall(love.filesystem.newFileData, data, path:match("([^/]+)$"))
+		data = nil
+		collectgarbage()
 		results:push({ path = path, fileData = ok and fd or nil })
 	else
 		results:push({ path = path })
@@ -29,10 +38,12 @@ local requests, results
 local entries = {} -- path -> { state = "pending" | "ready" | "failed", fileData, used }
 local clock = 0
 
+Loader.MAX = 96 * 1024 * 1024
+
 function Loader.init()
 	requests = love.thread.getChannel("rc_load_requests")
 	results = love.thread.getChannel("rc_load_results")
-	love.thread.newThread(THREAD):start()
+	love.thread.newThread(THREAD):start(Loader.MAX)
 end
 
 local function collect()

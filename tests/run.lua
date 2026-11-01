@@ -23,6 +23,7 @@ local Browser = require("lib.browser")
 local Deck = require("lib.deck")
 local Tape = require("lib.tape")
 local Style = require("lib.style")
+local Probe = require("lib.probe")
 
 local failures, count = 0, 0
 local function check(name, cond)
@@ -74,6 +75,42 @@ b:back()
 check("back selects folder", b.path == tmp and b.entries[b.sel].name == "Albums")
 b:back()
 check("back at root stays", b.path == tmp)
+
+-- Song lengths from headers, on files built byte by byte.
+do
+	local function le(n, bytes)
+		local t = {}
+		for i = 1, bytes do
+			t[i] = string.char(n % 256)
+			n = math.floor(n / 256)
+		end
+		return table.concat(t)
+	end
+	local function write(name, data)
+		local path = os.tmpname() .. name
+		local f = assert(io.open(path, "wb"))
+		f:write(data)
+		f:close()
+		return path
+	end
+	-- WAV: 44.1 kHz stereo 16-bit, 2.5 s of samples.
+	local n = 44100 * 4 * 2.5
+	local wav = write(".wav", "RIFF" .. le(36 + n, 4) .. "WAVEfmt " .. le(16, 4) .. le(1, 2) .. le(2, 2)
+		.. le(44100, 4) .. le(176400, 4) .. le(4, 2) .. le(16, 2) .. "data" .. le(n, 4) .. string.rep("\0", n))
+	check("probe: wav", math.abs(Probe.duration(wav) - 2.5) < 1e-6)
+	-- FLAC: STREAMINFO with 48 kHz and 4,800,000 samples = 100 s.
+	local si = string.rep("\0", 10) .. string.char(0x0B, 0xB8, 0x01, 0xF0, 0x00, 0x49, 0x3E, 0x00) .. string.rep("\0", 16)
+	local flac = write(".flac", "fLaC" .. string.char(0x80, 0, 0, 34) .. si)
+	check("probe: flac", math.abs(Probe.duration(flac) - 100) < 1e-6)
+	-- MP3: constant 128 kbps, MPEG-1 Layer III 44.1 kHz frames, 160,000 bytes = 10 s.
+	local frame = string.char(0xFF, 0xFB, 0x90, 0x00)
+	local mp3 = write(".mp3", frame .. string.rep("\0", 160000 - 4))
+	check("probe: cbr mp3", math.abs(Probe.duration(mp3) - 10) < 1e-6)
+	check("probe: not audio", Probe.duration(write(".txt", "hello")) == nil)
+	os.remove(wav)
+	os.remove(flac)
+	os.remove(mp3)
+end
 
 -- Letter jumps
 check("initials", Browser.initial("kind of blue") == "K" and Browser.initial("'86 Mix") == "#" and Browser.initial("Ёлка") == "Ё")

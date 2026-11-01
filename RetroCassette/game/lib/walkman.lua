@@ -22,8 +22,10 @@ local C = {
 
 Walkman.WIDTH, Walkman.HEIGHT = 720, 480
 
--- The other button that works each key, printed under its symbol as in the library.
-Walkman.TWINS = { stop = "B", play = "A" }
+-- Other buttons that do what each key does, shown as badges on the key. The
+-- D-pad skips straight to the previous / next song, as a tap on REW / FF does
+-- by winding there.
+Walkman.TWINS = { rew = { "‹" }, stop = { "B" }, play = { "A" }, ff = { "›" } }
 
 -- The cassette is drawn in its own 500x316 coordinates (origin at SHELL) and
 -- scaled up to fill the screen: centred, and as large as its height allows

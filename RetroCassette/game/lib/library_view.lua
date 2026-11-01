@@ -18,9 +18,9 @@ local SPINE_X, SPINE_W, SPINE_H = 40, 600, 38
 local STACK_Y, PITCH = 44, 43
 local SLIDE = 40
 
--- The player's keys at the bottom, with the button that does the same printed
--- under each: L1/R1 flip a pile, L2 goes back up, R2 plays.
-local TWINS = { stop = "B  or  ‹", play = "A" }
+-- The player's keys at the bottom, with badges for the buttons that do the
+-- same: L1/R1 jump a letter, L2 (B, ‹) goes back up, R2 (A) plays.
+local TWINS = { stop = { "B", "‹" }, play = { "A" } }
 
 -- "03 - Song Name.mp3" -> "Song Name"
 function View.songTitle(path)
@@ -238,10 +238,10 @@ function View:draw(browser)
 	lg.setColor(0.30, 0.22, 0.15)
 	lg.rectangle("fill", 0, 438, W, 42)
 	Keys.draw(self.keyDepth, TWINS)
-	lg.setFont(Fonts.get("print", 14))
-	lg.setColor(0.93, 0.88, 0.70, 0.75)
-	local open = e and e.kind == "dir" and "     ›  open" or ""
-	lg.printf("up · down  choose" .. open, 210, 452, 300, "center")
+	lg.setFont(Fonts.get("print", 17))
+	lg.setColor(0.93, 0.88, 0.70, 0.85)
+	local open = e and e.kind == "dir" and "    ›  open" or ""
+	lg.printf("up · down  choose" .. open, 234, 450, 252, "center")
 end
 
 return View
