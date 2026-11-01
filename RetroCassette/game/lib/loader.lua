@@ -10,15 +10,34 @@ local Loader = {}
 local THREAD = [[
 require("love.data")
 require("love.filesystem")
-local ffi = require("ffi")
 local CHUNK = 1048576
 local requests = love.thread.getChannel("rc_load_requests")
 local results = love.thread.getChannel("rc_load_results")
+
+-- Piece-by-piece reading needs LuaJIT's ffi and ByteData:getFFIPointer (LÖVE
+-- 11.3+). Without them, read the file in one go (a whole-file Lua string).
+local hasFFI, ffi = pcall(require, "ffi")
+local probe = love.data.newByteData(1)
+local piecewise = hasFFI and probe.getFFIPointer ~= nil and not os.getenv("RC_NO_FFI")
+probe:release()
+print("loader: " .. (piecewise and "reading songs in 1 MB pieces" or "reading songs whole (no ffi or LÖVE < 11.3)"))
+
+local function loadWhole(path, f)
+	local data = f:read("*a")
+	f:close()
+	local ok, fileData = pcall(love.filesystem.newFileData, data, path:match("([^/]+)$"))
+	data = nil
+	collectgarbage()
+	return ok and fileData or nil
+end
 
 local function load(path)
 	local f = io.open(path, "rb")
 	if not f then
 		return nil
+	end
+	if not piecewise then
+		return loadWhole(path, f)
 	end
 	local size = f:seek("end")
 	f:seek("set")
