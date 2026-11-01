@@ -228,6 +228,25 @@ check("held rew reviews muted", not sources.b.playing and d:keysDown().rew == 1)
 d:release("rew")
 check("tap rew goes to previous song", d.mode == "ams" and d.amsTarget == 0)
 
+-- Holding FF longer winds faster: 3x with sound, then 10x and 30x muted.
+do
+	local dh = newDeck()
+	dh:insert(Tape.new({ "a", "b" }), 0)
+	dh:press("play")
+	dh:update(0.01)
+	dh:press("ff")
+	dh:update(1)
+	check("hold ff: 3x with sound", sources.a.playing and sources.a.pitch == Deck.CUE_RATE)
+	for _ = 1, 15 do dh:update(0.1) end
+	check("hold ff: 10x muted after 2 s", not sources.a.playing and dh:holdRate() == 10)
+	local t = dh.t
+	for _ = 1, 30 do dh:update(0.1) end
+	check("hold ff: 30x after 5 s", dh:holdRate() == 30 and dh.t > t + 30)
+	dh:release("ff")
+	dh:update(0.01)
+	check("release: plays on from there", dh.mode == "play" and sources.a.playing and sources.a.pitch == 1)
+end
+
 -- End of a song runs into the gap, then the next song; end of tape stops.
 d = newDeck()
 d:insert(Tape.new({ "a", "b" }), 0)

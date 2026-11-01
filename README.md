@@ -57,10 +57,10 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 
 | Button | Key | Stopped | Playing |
 | --- | --- | --- | --- |
-| L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted |
+| L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted, faster the longer you hold |
 | L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is |
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
-| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
+| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched; after 2 s it winds at 10x, after 5 s at 30x (muted) |
 
 A works as PLAY and B as STOP; the keys show these twins as round badges. D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay

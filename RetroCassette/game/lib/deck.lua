@@ -2,7 +2,8 @@
 -- portable player, with cue/review and an automatic music sensor (AMS).
 --
 --   stopped      FF/REW tap latches and winds until STOP or the end of the tape
---   playing      FF held = cue (fast, high-pitched audio), REW held = review (muted)
+--   playing      FF held = cue (fast, high-pitched audio), REW held = review (muted);
+--                both speed up the longer they're held (3x -> 10x -> 30x)
 --                FF/REW tapped = wind to the next song / back to this or the previous song
 --   PLAY         while playing, pauses (the key stays half-way down); again resumes
 --   STOP         releases every key; pressed again while stopped, opens the lid
@@ -15,6 +16,10 @@ Deck.__index = Deck
 
 Deck.CUE_RATE = 3
 Deck.REVIEW_RATE = 4
+-- Holding FF / REW while playing speeds up the longer it's held: seconds held
+-- -> tape speed. Above CUE_RATE the music is muted and the tape just winds.
+Deck.CUE_STEPS = { { 0, Deck.CUE_RATE }, { 2, 10 }, { 5, 30 } }
+Deck.REVIEW_STEPS = { { 0, Deck.REVIEW_RATE }, { 2, 10 }, { 5, 30 } }
 Deck.TAP_TIME = 0.3
 -- How long the reels whir after a skip.
 Deck.SKIP_TIME = 0.35
@@ -256,10 +261,29 @@ function Deck:loadSource(i)
 	return "ok"
 end
 
+-- Tape speed while FF / REW is held during play.
+function Deck:holdRate()
+	local held = self.clock - self.holdStart
+	local rate
+	for _, step in ipairs(self.hold > 0 and Deck.CUE_STEPS or Deck.REVIEW_STEPS) do
+		if held >= step[1] then
+			rate = step[2]
+		end
+	end
+	return rate
+end
+
 function Deck:updatePlay(dt)
 	local tape = self.tape
-	if self.hold == -1 then
-		self.t = math.max(0, self.t - Deck.REVIEW_RATE * dt)
+	if self.hold and (self.hold < 0 or self:holdRate() > Deck.CUE_RATE) then
+		-- Review, or cue faster than music makes sense: the tape winds silently.
+		if self.started then
+			self:silence()
+		end
+		self.t = math.max(0, math.min(tape.length, self.t + self.hold * self:holdRate() * dt))
+		if self.t >= tape.length then
+			self:autoStop()
+		end
 		return
 	end
 	local rate = self.hold == 1 and Deck.CUE_RATE or 1
@@ -358,10 +382,9 @@ function Deck:tapeSpeed()
 	elseif self.mode == "ams" then
 		return 6 * self.amsDir
 	elseif self.mode == "play" then
-		if self.hold == 1 then
-			return Deck.CUE_RATE
-		elseif self.hold == -1 then
-			return -Deck.REVIEW_RATE
+		if self.hold then
+			-- The reels' look tops out at 6x (faster just strobes).
+			return self.hold * math.min(self:holdRate(), 6)
 		end
 		return 1
 	end
