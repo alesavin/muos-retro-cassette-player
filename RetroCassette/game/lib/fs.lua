@@ -12,6 +12,9 @@ local function quote(s)
 	return "'" .. (s:gsub("'", "'\\''")) .. "'"
 end
 
+-- A path quoted for the shell.
+fs.quote = quote
+
 function fs.join(a, b)
 	if a:sub(-1) == "/" then
 		return a .. b

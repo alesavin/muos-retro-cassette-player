@@ -81,6 +81,7 @@ local function deckAction(action)
 	local key = KEY_FOR_ACTION[action]
 	if key and deck:press(key) == "eject" then
 		deck:eject()
+		Loader.clear()
 		clunk()
 		screen = "library"
 	end
@@ -138,6 +139,7 @@ function love.update(dt)
 	if Durations.update(deck.tape) then
 		Frame.invalidate() -- the tape's length changed: redraw the window scale
 	end
+	Loader.update()
 	deck:update(dt)
 	local keys = deck:keysDown()
 	keys.stop = (Input.isDown("l2") or Input.isDown("b")) and 1 or 0
@@ -164,6 +166,7 @@ function love.draw()
 			title = track and LibraryView.songTitle(track.path) or "",
 			subtitle = track and ui.safe(fs.basename(fs.parent(track.path))) or "",
 			tapeLength = deck.tape and deck.tape.length,
+			position = deck.t,
 			style = LibraryView.tapeStyle(track and track.path or ""),
 		})
 	else
@@ -172,8 +175,8 @@ function love.draw()
 	Scaler.finish()
 end
 
--- LÖVE's standard loop, paced by lib/frame.lua: sleeps out each period and
--- only redraws when something changed or moves.
+-- LÖVE's standard loop, paced by lib/frame.lua: sleeps out each period, redraws
+-- when something changed or moves, and otherwise re-shows the last frame.
 function love.run()
 	love.load(love.arg.parseGameArguments(arg), arg)
 	love.timer.step()
@@ -187,10 +190,15 @@ function love.run()
 			love.handlers[name](a, b, c, d, e, f)
 		end
 		love.update(love.timer.step())
-		if love.graphics.isActive() and Frame.shouldDraw() then
+		local frame = love.graphics.isActive() and Frame.next(love.timer.getTime())
+		if frame then
 			love.graphics.origin()
 			love.graphics.clear(love.graphics.getBackgroundColor())
-			love.draw()
+			if frame == "draw" then
+				love.draw()
+			else
+				Scaler.finish() -- the last frame again, without redrawing the scene
+			end
 			love.graphics.present()
 		end
 		local rest = Frame.period() - (love.timer.getTime() - start)

@@ -25,8 +25,8 @@ are named `RetroCassette`, so updates install over the earlier version.
 
 - **A folder is one side of a tape.** Its songs are recorded one after another
   with a few seconds of blank tape between them. The reels show how far you are
-  through the whole album, and the minute marks on the cassette window show the
-  time: read it where the edge of the right-hand tape pack sits.
+  through the whole album, and between them the window shows the time played
+  (white) and remaining (amber) on the side, which helps most with long mixes.
 - **The library is a box of tapes.** Each album folder, and each song inside
   one, is a cassette lying in a stack with its spine facing you.
 - **Every tape has its own look**, chosen from its folder's name: shell colour,
@@ -41,9 +41,12 @@ are named `RetroCassette`, so updates install over the earlier version.
   in and a pencil note says "40 of 87", and A–Z divider cards stand between
   the albums where each letter starts.
 - **Two cards** show up as **SD1 · MUSIC** and **SD2 · MUSIC**.
-- **Loading:** songs are read in the background. While a big file loads,
-  PLAY sinks and the head rises slowly, like a motor starting; the next song
-  is read ahead so moving on is quick.
+- **Loading:** songs load in the background, so the screen never freezes;
+  while a big file loads, PLAY sinks and the head rises like a motor
+  starting. The next song is read ahead. Song lengths come from file headers,
+  so even hour-long mixes don't have to be loaded to measure them. A song too
+  big for the free memory is skipped like an unreadable file instead of
+  crashing the app.
 - **Pocket mode:** after 30 seconds without a button press the screen goes
   dark; music keeps playing. Any button wakes it (that press does nothing else).
 
@@ -56,12 +59,12 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 
 | Button | Key | Stopped | Playing |
 | --- | --- | --- | --- |
-| L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted |
+| L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted, faster the longer you hold |
 | L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is |
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
-| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched |
+| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched; after 2 s it winds at 10x, after 5 s at 30x (muted) |
 
-A works as PLAY and B as STOP (printed under those keys). D-pad left / right jumps straight to the
+A works as PLAY and B as STOP; the keys show these twins in small print. D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay
 real REW / FF.
 
@@ -148,7 +151,9 @@ RetroCassette/            what gets installed on the device
     lib/fonts.lua         label fonts (assets/fonts, free licences)
     lib/frame.lua         frame pacing and pocket mode
     lib/keys.lua          the transport keys, shared by player and library
-    lib/loader.lua        reads song files on a background thread
+    lib/loader.lua        reads songs on a background thread, 1 MB at a time
+    lib/memory.lua        checks a song fits in the free memory
+    lib/probe.lua         song lengths from file headers
     lib/fs.lua            SD card access (find / io.open)
     lib/input.lua         gamepad + keyboard to actions, key repeat
     lib/sfx.lua           generated hiss, winding whir and key clunk

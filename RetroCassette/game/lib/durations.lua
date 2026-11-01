@@ -1,30 +1,57 @@
 -- Reads track lengths on a background thread so the reels and the window scale
--- can show the whole tape without stalling the screen while files load.
+-- can show the whole tape without stalling the screen. Lengths come from file
+-- headers (lib/probe.lua); only small files are ever decoded to find them.
 local Durations = {}
 
 local THREAD = [[
 require("love.filesystem")
 require("love.sound")
+local probeSource, maxDecode = ...
+local Probe = loadstring(probeSource)()
 local jobs = love.thread.getChannel("rc_duration_jobs")
 local results = love.thread.getChannel("rc_duration_results")
 while true do
 	local job = jobs:demand()
-	local d = -1
-	local f = io.open(job.path, "rb")
-	if f then
-		local data = f:read("*a")
-		f:close()
-		local ok, res = pcall(function()
-			local fd = love.filesystem.newFileData(data, job.name)
-			return love.sound.newDecoder(fd):getDuration()
-		end)
-		if ok and res then
-			d = res
+	-- Headers first: a few kilobytes, whatever the file's size.
+	local d = Probe.duration(job.path)
+	if not d then
+		-- Otherwise decode, which loads the file whole: small files only.
+		local f = io.open(job.path, "rb")
+		local size = f and f:seek("end") or math.huge
+		if f then
+			f:close()
+		end
+		if size <= maxDecode then
+			local ok, res = pcall(function()
+				local f = io.open(job.path, "rb")
+				local data = f:read("*a")
+				f:close()
+				return love.sound.newDecoder(love.filesystem.newFileData(data, job.name)):getDuration()
+			end)
+			d = ok and res or nil
 		end
 	end
-	results:push({ tape = job.tape, index = job.index, duration = d })
+	results:push({ tape = job.tape, index = job.index, duration = d or -1 })
+	collectgarbage()
 end
 ]]
+
+-- Files the thread may decode whole when their header doesn't give a length.
+local MAX_DECODE = 32 * 1024 * 1024
+
+-- lib/probe.lua's source, handed to the thread (threads don't share modules).
+local function probeSource()
+	local src = love.filesystem.read("lib/probe.lua")
+	if not src then
+		local path = package.searchpath("lib.probe", package.path)
+		local f = path and io.open(path, "rb")
+		src = f and f:read("*a")
+		if f then
+			f:close()
+		end
+	end
+	return src
+end
 
 local thread, jobs, results
 local generation = 0
@@ -33,7 +60,7 @@ function Durations.init()
 	jobs = love.thread.getChannel("rc_duration_jobs")
 	results = love.thread.getChannel("rc_duration_results")
 	thread = love.thread.newThread(THREAD)
-	thread:start()
+	thread:start(probeSource(), MAX_DECODE)
 end
 
 -- Queues every track on the tape; results for older tapes are ignored.
@@ -42,7 +69,12 @@ function Durations.probe(tape)
 	jobs:clear()
 	results:clear()
 	for i, tr in ipairs(tape.tracks) do
-		jobs:push({ tape = generation, index = i, path = tr.path, name = tr.path:match("([^/]+)$") })
+		jobs:push({
+			tape = generation,
+			index = i,
+			path = tr.path,
+			name = tr.path:match("([^/]+)$"),
+		})
 	end
 end
 

@@ -24,7 +24,8 @@ library spine and the cassette in the player.
 - `love.filesystem` can't see the SD cards. Use `lib/fs.lua` (shell `find`, `io.open`) for music; any new shell command there must quote paths with its `quote` helper.
 - Pass file names through `ui.safe` before printing; they may not be valid UTF-8.
 - Keyboard and gamepad buttons map to the same action names in `lib/input.lua`; screens only handle actions.
-- The screen is only redrawn when something moves or changed (`lib/frame.lua`), to keep the device cool. A state change that doesn't come from a button press must call `Frame.invalidate()`, and anything animated must report itself through the screen's `isMoving()`.
+- The screen is only redrawn when something moves or changed (`lib/frame.lua`), to keep the device cool; otherwise the last frame is re-presented ~10 times a second, which muOS needs to draw its volume overlay. A state change that doesn't come from a button press must call `Frame.invalidate()`, and anything animated must report itself through the screen's `isMoving()`.
 - Load fonts through `lib/fonts.lua`, never `love.graphics.newFont` directly.
+- Never read a whole song file into a Lua string: LÖVE 11 already holds a playing song whole. Songs load through `lib/loader.lua` (1 MB pieces into one LÖVE buffer, on a thread) after `lib/memory.lua` says they fit; lengths come from `lib/probe.lua` (headers only).
 - Don't commit LÖVE binaries (`RetroCassette/bin/`) or `RetroCassette/data/`.
 - Never rename the `RetroCassette` folder or package: muOS identifies the app by its folder, so a new name installs a second copy beside the old one. The displayed name lives in `mux_lang.ini`.
