@@ -1,3 +1,4 @@
+local Battery = require("lib.battery")
 local Browser = require("lib.browser")
 local Deck = require("lib.deck")
 local Durations = require("lib.durations")
@@ -115,6 +116,7 @@ function love.load()
 	Sfx.init()
 	Durations.init()
 	Loader.init()
+	Battery.find()
 
 	deck = Deck.new({ onClunk = clunk })
 	deck:setVolume(1) -- the device's volume buttons set the level
@@ -140,6 +142,9 @@ function love.update(dt)
 		Frame.invalidate() -- the tape's length changed: redraw the window scale
 	end
 	Loader.update()
+	if Battery.update(love.timer.getTime()) then
+		Frame.invalidate() -- the charge changed: redraw the icon
+	end
 	deck:update(dt)
 	local keys = deck:keysDown()
 	keys.stop = (Input.isDown("l2") or Input.isDown("b")) and 1 or 0

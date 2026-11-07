@@ -1,6 +1,7 @@
 -- The library as a box of tapes: every folder (album) and song is a cassette
 -- lying in a stack with its spine facing you. The selected tape slides out.
 -- Songs wear their folder's style, the same as the cassette in the player.
+local Battery = require("lib.battery")
 local Browser = require("lib.browser")
 local Fonts = require("lib.fonts")
 local Keys = require("lib.keys")
@@ -233,6 +234,7 @@ function View:draw(browser)
 		note = string.format("%d of %d", browser.sel, #entries)
 	end
 	drawBoxLabel(ui.safe(box), note)
+	Battery.draw(680, 22)
 
 	-- Bottom edge: the keys, and the D-pad's part between them.
 	lg.setColor(0.30, 0.22, 0.15)

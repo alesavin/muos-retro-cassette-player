@@ -25,6 +25,7 @@ local Tape = require("lib.tape")
 local Style = require("lib.style")
 local Probe = require("lib.probe")
 local Memory = require("lib.memory")
+local Battery = require("lib.battery")
 
 local failures, count = 0, 0
 local function check(name, cond)
@@ -371,6 +372,38 @@ check("unreadable file skipped", sources.b and sources.b.playing)
 
 d:setVolume(2)
 check("volume clamps", d.volume == 1)
+
+-- Battery: a fake sysfs with a charger and a battery.
+do
+	local sys = tmp .. "/power_supply"
+	sh("mkdir -p '" .. sys .. "/axp-usb' '" .. sys .. "/axp-battery'")
+	local function put(path, text)
+		local h = io.open(path, "w"); h:write(text .. "\n"); h:close()
+	end
+	put(sys .. "/axp-usb/type", "USB")
+	put(sys .. "/axp-battery/type", "Battery")
+	put(sys .. "/axp-battery/capacity", "73")
+	put(sys .. "/axp-battery/status", "Discharging")
+	Battery.SYSFS = sys
+	local noEnv = function() return nil end
+	check("battery found by scanning", Battery.find(noEnv))
+	check("battery read", Battery.update(0) and Battery.level == 73 and not Battery.charging)
+	put(sys .. "/axp-battery/capacity", "72")
+	check("battery not re-read before the poll", not Battery.update(10) and Battery.level == 73)
+	check("battery re-read after the poll", Battery.update(Battery.POLL) and Battery.level == 72)
+	check("battery unchanged: no redraw", not Battery.update(2 * Battery.POLL))
+	put(sys .. "/axp-battery/status", "Charging")
+	check("battery charging from status", Battery.update(3 * Battery.POLL) and Battery.charging)
+	-- The files muOS names win, and its charger file says whether it's plugged in.
+	put(sys .. "/axp-usb/online", "0")
+	local env = { RC_BATTERY_CAPACITY = sys .. "/axp-battery/capacity", RC_BATTERY_CHARGER = sys .. "/axp-usb/online" }
+	check("battery from muOS paths", Battery.find(function(k) return env[k] end))
+	Battery.update(0)
+	check("charger file: not charging", Battery.level == 72 and not Battery.charging)
+	env.RC_BATTERY_CAPACITY = sys .. "/missing"
+	Battery.SYSFS = tmp .. "/nothing"
+	check("no battery on a desktop", not Battery.find(function(k) return env[k] end) and not Battery.update(1e9) and Battery.level == nil)
+end
 
 sh("rm -rf '" .. tmp .. "'")
 print(string.format("%d/%d checks passed", count - failures, count))
