@@ -394,6 +394,10 @@ do
 	check("battery unchanged: no redraw", not Battery.update(2 * Battery.POLL))
 	put(sys .. "/axp-battery/status", "Charging")
 	check("battery charging from status", Battery.update(3 * Battery.POLL) and Battery.charging)
+	local phase = Battery.phase
+	check("charging segment moves", Battery.update(3 * Battery.POLL + Battery.STEP) and Battery.phase == (phase + 1) % Battery.STEPS)
+	check("charging segment waits for its step", not Battery.update(3 * Battery.POLL + Battery.STEP * 1.5))
+	check("battery colours", select(1, Battery.color(10)) > 0.9 and select(2, Battery.color(30)) > 0.7 and select(2, Battery.color(80)) > 0.8 and select(1, Battery.color(80)) < 0.5)
 	-- The files muOS names win, and its charger file says whether it's plugged in.
 	put(sys .. "/axp-usb/online", "0")
 	local env = { RC_BATTERY_CAPACITY = sys .. "/axp-battery/capacity", RC_BATTERY_CHARGER = sys .. "/axp-usb/online" }

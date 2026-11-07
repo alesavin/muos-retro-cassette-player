@@ -1,18 +1,28 @@
--- The handheld's battery, drawn as a status-bar icon in the top-right corner
--- like muOS's own (on the player it sits on the cassette's top edge). The
--- charge is read from sysfs: the files muOS names for the device (passed in
--- by mux_launch.sh), else the first battery under /sys/class/power_supply.
+-- The handheld's battery, shown as a short coloured line in the key row,
+-- between STOP/EJECT and PLAY on both screens: its length is the charge,
+-- green, yellow below HALF and red below LOW. While charging, a bright
+-- segment runs along it. The charge is read from sysfs: the files muOS names
+-- for the device (passed in by mux_launch.sh), else the first battery under
+-- /sys/class/power_supply.
 local Battery = {}
 
 Battery.POLL = 30 -- seconds between reads
-Battery.LOW = 20 -- percent: below this the fill turns red
+Battery.LOW = 20 -- percent: below this the line is red
+Battery.HALF = 45 -- percent: below this it is yellow
+Battery.STEP = 0.2 -- seconds between moves of the charging segment
+Battery.STEPS = 8 -- positions along the line per sweep
 Battery.SYSFS = "/sys/class/power_supply"
 
+-- Where the line sits: its centre, in canvas pixels, and its size.
+Battery.X, Battery.Y = 445, 462
+Battery.W, Battery.H = 50, 6
+
 local capacityPath, chargerPath, statusPath
-local lastRead = -math.huge
+local lastRead, lastStep = -math.huge, -math.huge
 
 Battery.level = nil -- 0..100, nil when there is no battery (a desktop)
 Battery.charging = false
+Battery.phase = 0 -- 0 .. STEPS-1: where the charging segment is
 
 local function readLine(path)
 	local f = path and path ~= "" and io.open(path, "r")
@@ -49,66 +59,68 @@ function Battery.find(env)
 	elseif capacityPath:match("/capacity$") then
 		statusPath = capacityPath:gsub("/capacity$", "/status")
 	end
-	lastRead = -math.huge
+	lastRead, lastStep = -math.huge, -math.huge
 	return capacityPath ~= nil
 end
 
--- Reads the battery every POLL seconds. Returns true when what's shown changed.
+-- Reads the battery every POLL seconds and, while charging, moves the
+-- segment every STEP seconds. Returns true when what's shown changed.
 function Battery.update(now)
-	if not capacityPath or now - lastRead < Battery.POLL then
+	if not capacityPath then
 		return false
 	end
-	lastRead = now
-	local level = tonumber(readLine(capacityPath))
-	level = level and math.max(0, math.min(100, level)) or nil
-	local charging
-	if readLine(chargerPath) then
-		charging = readLine(chargerPath) == "1"
-	else
-		local status = readLine(statusPath)
-		charging = status == "Charging" or status == "Full"
+	local changed = false
+	if now - lastRead >= Battery.POLL then
+		lastRead = now
+		local level = tonumber(readLine(capacityPath))
+		level = level and math.max(0, math.min(100, level)) or nil
+		local charging
+		if readLine(chargerPath) then
+			charging = readLine(chargerPath) == "1"
+		else
+			charging = readLine(statusPath) == "Charging"
+		end
+		changed = level ~= Battery.level or charging ~= Battery.charging
+		Battery.level, Battery.charging = level, charging
 	end
-	local changed = level ~= Battery.level or charging ~= Battery.charging
-	Battery.level, Battery.charging = level, charging
+	if Battery.charging and Battery.level and now - lastStep >= Battery.STEP then
+		lastStep = now
+		Battery.phase = (Battery.phase + 1) % Battery.STEPS
+		changed = true
+	end
 	return changed
 end
 
--- Draws the icon centred on (cx, cy), s times its normal size (34x17 plus the nub).
-function Battery.draw(cx, cy, s)
+function Battery.color(level)
+	if level < Battery.LOW then
+		return 0.95, 0.22, 0.15
+	elseif level < Battery.HALF then
+		return 1.0, 0.78, 0.15
+	end
+	return 0.35, 0.85, 0.30
+end
+
+function Battery.draw()
 	if not Battery.level then
 		return
 	end
 	local lg = love.graphics
-	s = s or 1
-	lg.push()
-	lg.translate(cx, cy)
-	lg.scale(s)
-	local w, h = 34, 17
-	local x, y = -w / 2 - 2, -h / 2
-	lg.setColor(0, 0, 0, 0.35)
-	lg.rectangle("fill", x + 1, y + 2, w + 4, h, 3, 3)
-	lg.setColor(0.93, 0.93, 0.93)
-	lg.setLineWidth(2)
-	lg.rectangle("line", x, y, w, h, 3, 3)
-	lg.rectangle("fill", x + w + 1, y + 5, 3, h - 10, 1, 1)
-	lg.setLineWidth(1)
+	local w, h = Battery.W, Battery.H
+	local x, y = Battery.X - w / 2, Battery.Y - h / 2
+	local r, g, b = Battery.color(Battery.level)
+	lg.setColor(0, 0, 0, 0.45)
+	lg.rectangle("fill", x - 1, y - 1, w + 2, h + 2, 3, 3)
+	lg.setColor(r, g, b, 0.18)
+	lg.rectangle("fill", x, y, w, h, 3, 3)
+	local filled = math.max(h, w * Battery.level / 100)
+	lg.setColor(r, g, b)
+	lg.rectangle("fill", x, y, filled, h, 3, 3)
 	if Battery.charging then
-		lg.setColor(0.35, 0.85, 0.35)
-	elseif Battery.level < Battery.LOW then
-		lg.setColor(0.95, 0.20, 0.15)
+		local seg = math.min(10, filled)
+		local sx = x + (filled - seg) * Battery.phase / (Battery.STEPS - 1)
+		lg.setColor(1, 1, 1, 0.75)
+		lg.rectangle("fill", sx, y, seg, h, 3, 3)
 	end
-	lg.rectangle("fill", x + 3, y + 3, (w - 6) * math.max(0.06, Battery.level / 100), h - 6, 1, 1)
-	if Battery.charging then
-		-- A lightning bolt: two triangles (LÖVE fills only convex polygons).
-		local c = x + w / 2
-		lg.setColor(0.10, 0.10, 0.10, 0.6)
-		lg.polygon("fill", c + 4, y + 1, c - 7, 2, c + 2, 2)
-		lg.polygon("fill", c - 4, y + h - 1, c + 7, -2, c - 2, -2)
-		lg.setColor(1, 0.9, 0.2)
-		lg.polygon("fill", c + 3, y + 3, c - 5, 1, c + 1, 1)
-		lg.polygon("fill", c - 3, y + h - 3, c + 5, -1, c - 1, -1)
-	end
-	lg.pop()
 end
 
 return Battery

@@ -3,6 +3,7 @@
 -- are drawn: the cassette filling the screen and the transport keys (lib/keys.lua)
 -- along the bottom edge above the real shoulder buttons. The cassette is drawn
 -- in its tape's style, matching its library spine.
+local Battery = require("lib.battery")
 local Fonts = require("lib.fonts")
 local Keys = require("lib.keys")
 local TapeArt = require("lib.tapeart")
@@ -314,6 +315,7 @@ function Walkman:draw(info)
 	lg.polygon("fill", 560, 0, 585, 0, 355, H, 330, H)
 
 	Keys.draw(self.keyDepth, Walkman.TWINS)
+	Battery.draw()
 end
 
 return Walkman

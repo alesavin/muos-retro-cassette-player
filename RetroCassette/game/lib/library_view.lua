@@ -234,16 +234,18 @@ function View:draw(browser)
 		note = string.format("%d of %d", browser.sel, #entries)
 	end
 	drawBoxLabel(ui.safe(box), note)
-	Battery.draw(680, 22)
 
 	-- Bottom edge: the keys, and the D-pad's part between them.
 	lg.setColor(0.30, 0.22, 0.15)
 	lg.rectangle("fill", 0, 438, W, 42)
 	Keys.draw(self.keyDepth, TWINS)
+	-- The hint, left of the battery line, its letters centred on the keys' symbols.
 	lg.setFont(Fonts.get("print", 17))
 	lg.setColor(0.93, 0.88, 0.70, 0.85)
-	local open = e and e.kind == "dir" and "    ›  open" or ""
-	lg.printf("up · down  choose" .. open, 234, 450, 252, "center")
+	local open = e and e.kind == "dir" and "  ›  open" or ""
+	local right = Battery.level and Battery.X - Battery.W / 2 - 6 or 486
+	lg.printf("up · down  choose" .. open, 234, 447, right - 234, "center")
+	Battery.draw()
 end
 
 return View
