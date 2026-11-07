@@ -51,6 +51,10 @@ if command -v GET_VAR >/dev/null 2>&1; then
 	RC_SD2_MOUNT="$(GET_VAR "device" "storage/sdcard/mount")"
 	RC_MUSIC_MOUNTS="$RC_SD1_MOUNT:$RC_SD2_MOUNT"
 	export RC_SD1_MOUNT RC_SD2_MOUNT RC_MUSIC_MOUNTS
+	# The battery's sysfs files, for the battery icon.
+	RC_BATTERY_CAPACITY="$(GET_VAR "device" "battery/capacity")"
+	RC_BATTERY_CHARGER="$(GET_VAR "device" "battery/charger")"
+	export RC_BATTERY_CAPACITY RC_BATTERY_CHARGER
 fi
 
 export SDL_GAMECONTROLLERCONFIG_FILE="/usr/lib/gamecontrollerdb.txt"

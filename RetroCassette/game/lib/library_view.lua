@@ -1,6 +1,7 @@
 -- The library as a box of tapes: every folder (album) and song is a cassette
 -- lying in a stack with its spine facing you. The selected tape slides out.
 -- Songs wear their folder's style, the same as the cassette in the player.
+local Battery = require("lib.battery")
 local Browser = require("lib.browser")
 local Fonts = require("lib.fonts")
 local Keys = require("lib.keys")
@@ -19,8 +20,15 @@ local STACK_Y, PITCH = 44, 43
 local SLIDE = 40
 
 -- The player's keys at the bottom, with the buttons that do the same printed
--- small beside each symbol: L1/R1 jump a letter, L2 (B, ‹) goes back up, R2 (A) plays.
+-- small beside each symbol: L1/R1 jump a letter, R2 (A) plays, L2 (B) goes back
+-- to the player while a tape is in it, otherwise back up (as ‹ does).
 local TWINS = { stop = { "B", "‹" }, play = { "A" } }
+local TWINS_TAPE_IN = { stop = { "B" }, play = { "A" } }
+
+-- The inside of the box, and the play sign beside the tape in the player (the
+-- battery line's green).
+local BOX = { 0.10, 0.10, 0.11 }
+local PLAYING = { 0.35, 0.85, 0.30 }
 
 -- "03 - Song Name.mp3" -> "Song Name"
 function View.songTitle(path)
@@ -150,6 +158,16 @@ local function drawDivider(letter, y)
 	lg.printf(letter, 685, y + 1, 30, "center")
 end
 
+-- The play sign in the box's left margin, beside the tape that's in the player.
+local function drawPlaying(y)
+	local size = 20
+	local x, top = 12, y + (SPINE_H - size) / 2
+	lg.setColor(0, 0, 0, 0.4)
+	ui.icon("play", x + 1, top + 2, size)
+	lg.setColor(PLAYING)
+	ui.icon("play", x, top, size)
+end
+
 local function drawNote(text)
 	lg.setColor(0, 0, 0, 0.35)
 	lg.rectangle("fill", 126, 156, 480, 170, 3, 3)
@@ -160,9 +178,10 @@ local function drawNote(text)
 	lg.printf(text, 140, 168, 440, "center")
 end
 
-function View:draw(browser)
-	-- Inside of a cardboard box.
-	lg.setColor(0.30, 0.22, 0.15)
+-- playing: the path of the song the player is at, or nil when it's empty.
+function View:draw(browser, playing)
+	-- Inside of a box.
+	lg.setColor(BOX)
 	lg.rectangle("fill", 0, 0, W, 480)
 	lg.setColor(0, 0, 0, 0.06)
 	lg.setLineWidth(1)
@@ -190,6 +209,10 @@ function View:draw(browser)
 		local e = entries[i]
 		local y = STACK_Y + (i - self.offset) * PITCH
 		local x = SPINE_X + (self.slide[i] or 0)
+		-- The tape in the player: its song, or the folder holding it.
+		if playing and (e.path == playing or playing:sub(1, #e.path + 1) == e.path .. "/") then
+			drawPlaying(y)
+		end
 		if e.kind == "file" then
 			drawSpine(View.tapeStyle(e.path), View.songTitle(e.path), string.format("%02d", songNo[i]), x, y, i == browser.sel)
 		else
@@ -215,7 +238,7 @@ function View:draw(browser)
 
 	-- Top edge of the box, behind the label, so a tape scrolled off the top
 	-- doesn't show through it.
-	lg.setColor(0.30, 0.22, 0.15)
+	lg.setColor(BOX)
 	lg.rectangle("fill", 0, 0, W, 40)
 	lg.setColor(0, 0, 0, 0.18)
 	lg.rectangle("fill", 0, 40, W, 3)
@@ -235,13 +258,16 @@ function View:draw(browser)
 	drawBoxLabel(ui.safe(box), note)
 
 	-- Bottom edge: the keys, and the D-pad's part between them.
-	lg.setColor(0.30, 0.22, 0.15)
+	lg.setColor(BOX)
 	lg.rectangle("fill", 0, 438, W, 42)
-	Keys.draw(self.keyDepth, TWINS)
+	Keys.draw(self.keyDepth, playing and TWINS_TAPE_IN or TWINS)
+	-- The hint, left of the battery line, its letters centred on the keys' symbols.
 	lg.setFont(Fonts.get("print", 17))
 	lg.setColor(0.93, 0.88, 0.70, 0.85)
-	local open = e and e.kind == "dir" and "    ›  open" or ""
-	lg.printf("up · down  choose" .. open, 234, 450, 252, "center")
+	local open = e and e.kind == "dir" and "  ›  open" or ""
+	local right = Battery.level and Battery.X - Battery.W / 2 - 6 or 486
+	lg.printf("up · down  choose" .. open, 234, 447, right - 234, "center")
+	Battery.draw()
 end
 
 return View

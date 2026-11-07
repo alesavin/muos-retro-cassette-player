@@ -1,3 +1,4 @@
+local Battery = require("lib.battery")
 local Browser = require("lib.browser")
 local Deck = require("lib.deck")
 local Durations = require("lib.durations")
@@ -13,11 +14,13 @@ local Walkman = require("lib.walkman")
 local fs = require("lib.fs")
 local ui = require("lib.ui")
 
--- Shoulder buttons in the order the keys sit on the player.
-local KEY_FOR_ACTION = { l1 = "rew", l2 = "stop", r2 = "play", r1 = "ff", a = "play", b = "stop" }
+-- Buttons for the player's keys. L2 (EJECT) and B don't reach the deck: they
+-- switch between the player and the library, and the tape keeps playing.
+local KEY_FOR_ACTION = { l1 = "rew", r2 = "play", r1 = "ff", a = "play" }
 
 local screen = "library" -- library | deck
 local deck, browser, library, walkman
+local nowPlaying -- path of the song at the tape's current position, or nil
 
 local function clunk()
 	Sfx.clunk(0.5)
@@ -27,6 +30,7 @@ local function insertTape(paths, index)
 	if not paths then
 		return
 	end
+	Loader.clear() -- the old tape's read-ahead isn't needed any more
 	local tape = Tape.new(paths)
 	deck:insert(tape, tape.tracks[index].start)
 	Durations.probe(tape)
@@ -36,10 +40,34 @@ local function insertTape(paths, index)
 	Settings.save()
 end
 
+-- Back to the player, the tape as it was.
+local function toPlayer()
+	clunk()
+	screen = "deck"
+end
+
+-- R2 / A in the library: puts the chosen tape in and plays it. Choosing the
+-- tape that's already in (its album, or the song playing now) only goes back
+-- to the player, unless that tape has run to its end.
+local function playChosen()
+	local e = browser.entries[browser.sel]
+	local paths, index = browser:playSelection()
+	if not paths then
+		return
+	end
+	local tape = deck.tape
+	local over = tape and deck.mode == "stop" and deck.t >= tape.length
+	if tape and not over and tape:hasPaths(paths) and (e.kind == "dir" or deck:currentTrack() == tape.tracks[index]) then
+		toPlayer()
+	else
+		insertTape(paths, index)
+	end
+end
+
 -- The library uses the player's keys: L1/R1 jump a letter among albums (a pile
--- of tapes among songs), R2 (PLAY)
--- or A puts the tape in, L2 (STOP), B or D-pad left goes back up, D-pad right
--- opens an album to show its songs.
+-- of tapes among songs), R2 (PLAY) or A puts the tape in, D-pad right opens an
+-- album to show its songs and D-pad left goes back up. L2 (EJECT) or B goes
+-- back to the player while a tape is in it, otherwise back up too.
 local function libraryAction(action, isRepeat)
 	if action == "up" then
 		browser:move(-1, not isRepeat)
@@ -54,7 +82,9 @@ local function libraryAction(action, isRepeat)
 	elseif action == "right" then
 		browser:openSelection()
 	elseif action == "r2" or action == "a" then
-		insertTape(browser:playSelection())
+		playChosen()
+	elseif (action == "l2" or action == "b") and deck.tape then
+		toPlayer()
 	elseif action == "l2" or action == "b" or action == "left" then
 		browser:back()
 	end
@@ -70,7 +100,8 @@ local function libraryKeys()
 		end
 		return 0
 	end
-	return { rew = down("l1"), stop = down("l2", "b", "left"), play = down("r2", "a"), ff = down("r1") }
+	local stop = deck.tape and down("l2", "b") or down("l2", "b", "left")
+	return { rew = down("l1"), stop = stop, play = down("r2", "a"), ff = down("r1") }
 end
 
 local function deckAction(action)
@@ -78,19 +109,21 @@ local function deckAction(action)
 		deck:skip(action == "right" and 1 or -1)
 		return
 	end
-	local key = KEY_FOR_ACTION[action]
-	if key and deck:press(key) == "eject" then
-		deck:eject()
-		Loader.clear()
+	if action == "l2" or action == "b" then
+		-- EJECT: to the library; the tape plays on.
+		deck:letGo()
 		clunk()
 		screen = "library"
+		return
+	end
+	local key = KEY_FOR_ACTION[action]
+	if key then
+		deck:press(key)
 	end
 end
 
 local function onAction(action, isRepeat)
-	if Frame.input(love.timer.getTime()) then
-		return -- the press only woke the screen
-	end
+	Frame.invalidate()
 	if action == "quit" then
 		love.event.quit()
 	elseif screen == "library" then
@@ -115,6 +148,7 @@ function love.load()
 	Sfx.init()
 	Durations.init()
 	Loader.init()
+	Battery.find()
 
 	deck = Deck.new({ onClunk = clunk })
 	deck:setVolume(1) -- the device's volume buttons set the level
@@ -131,7 +165,6 @@ function love.load()
 
 	Input.onAction = onAction
 	Input.onRelease = onRelease
-	Frame.lastInput = love.timer.getTime()
 end
 
 function love.update(dt)
@@ -140,6 +173,9 @@ function love.update(dt)
 		Frame.invalidate() -- the tape's length changed: redraw the window scale
 	end
 	Loader.update()
+	if Battery.update(love.timer.getTime()) then
+		Frame.invalidate() -- the charge changed: redraw the battery line
+	end
 	deck:update(dt)
 	local keys = deck:keysDown()
 	keys.stop = (Input.isDown("l2") or Input.isDown("b")) and 1 or 0
@@ -152,15 +188,19 @@ function love.update(dt)
 	library:update(dt, browser, libraryKeys())
 	Sfx.update(deck)
 	local moving = screen == "deck" and walkman:isMoving() or screen == "library" and library:isMoving()
-	Frame.update(love.timer.getTime(), moving)
+	-- The library marks the song playing, so it changes when the tape moves on.
+	local track = deck:currentTrack()
+	local playing = track and track.path or nil
+	if playing ~= nowPlaying then
+		nowPlaying = playing
+		Frame.invalidate()
+	end
+	Frame.update(moving)
 end
 
 function love.draw()
 	Scaler.begin()
-	if Frame.dark then
-		-- Pocket mode: nothing on screen until a button is pressed.
-		love.graphics.clear(0, 0, 0, 1)
-	elseif screen == "deck" then
+	if screen == "deck" then
 		local track = deck:currentTrack()
 		walkman:draw({
 			title = track and LibraryView.songTitle(track.path) or "",
@@ -170,7 +210,7 @@ function love.draw()
 			style = LibraryView.tapeStyle(track and track.path or ""),
 		})
 	else
-		library:draw(browser)
+		library:draw(browser, nowPlaying)
 	end
 	Scaler.finish()
 end

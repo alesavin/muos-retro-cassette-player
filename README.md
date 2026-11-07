@@ -4,14 +4,15 @@ A music player for [muOS](https://muos.dev) handhelds that shows a cassette
 inside a closed portable player. The handheld's own screen bezel acts as the
 player body, so the cassette fills the screen. The transport keys sit on the bottom
 edge, right above the shoulder buttons. The layout is made for the Anbernic RG34XXSP
-(720×480); other screens get black bars. There are no on-screen icons or readouts. You
+(720×480); other screens get black bars. There are no on-screen icons or readouts,
+apart from a small battery line between the keys. You
 can tell what the player is doing the way you would with a real one: from the
 keys that are pressed down, the turning reels, how much tape is on each reel
 and the play head against the tape.
 
 | The box of tapes | Inside an album |
 | --- | --- |
-| ![Library: albums as a stack of cassettes, the selected one slid out](docs/library.png) | ![An album's songs as tapes in the album's style](docs/album.png) |
+| ![Library: albums as a stack of cassettes, the selected one slid out](docs/library.png) | ![An album's songs as tapes, a green play sign beside the one playing](docs/album.png) |
 | **Playing Midnight Synth** | **Playing a song from Coastal Drive** |
 | ![A mint cassette with orange and red stripes playing in the player](docs/deck.png) | ![A chrome cassette with a felt-marker label playing in the player](docs/deck-2.png) |
 
@@ -29,6 +30,10 @@ are named `RetroCassette`, so updates install over the earlier version.
   (white) and remaining (amber) on the side, which helps most with long mixes.
 - **The library is a box of tapes.** Each album folder, and each song inside
   one, is a cassette lying in a stack with its spine facing you.
+- **The music keeps playing while you browse.** EJECT (L2) goes from the
+  player to the box and back. A green play sign beside a tape marks the one in
+  the player, and inside its album the song playing. PLAY on that tape goes
+  back to the player without starting over; PLAY on another one swaps the tape.
 - **Every tape has its own look**, chosen from its folder's name: shell colour,
   label paper, stripes, the handwriting or typeface of the title and the ink.
   The cassette in the player looks exactly like its spine in the box.
@@ -47,8 +52,10 @@ are named `RetroCassette`, so updates install over the earlier version.
   so even hour-long mixes don't have to be loaded to measure them. A song too
   big for the free memory is skipped like an unreadable file instead of
   crashing the app.
-- **Pocket mode:** after 30 seconds without a button press the screen goes
-  dark; music keeps playing. Any button wakes it (that press does nothing else).
+- **Battery:** a short line between EJECT and PLAY on both screens. Its
+  length is the charge; it is green, then yellow below 45% and red below 20%.
+  While charging, a bright segment runs along it.
+- **The screen stays on** while the app runs.
 
 MP3, OGG, FLAC and WAV are supported.
 
@@ -60,11 +67,11 @@ order they sit on the RG34XXSP hinge (L1 L2 on the left, R2 R1 on the right):
 | Button | Key | Stopped | Playing |
 | --- | --- | --- | --- |
 | L1 | REW | Rewinds until STOP or the start of the tape | Tap: back to the start of this song (or the previous one in its first 3 s). Hold: review, the tape runs back muted, faster the longer you hold |
-| L2 | STOP/EJECT | Opens the lid and goes back to the library | Stops; the tape stays where it is |
+| L2 | EJECT | Goes to the library; the tape stays in | Goes to the library; the music keeps playing |
 | R2 | PLAY/PAUSE | Plays | Pauses; press again to carry on |
-| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched; after 2 s it winds at 10x, after 5 s at 30x (muted) |
+| R1 | FF | Fast-forwards until STOP or the end of the tape | Tap: wind to the next song (music sensor). Hold: cue, the tape plays fast and high-pitched; after 2 s it winds at 10x, after 5 s at 30x and after 8 s at 120x (muted) |
 
-A works as PLAY and B as STOP; the keys show these twins in small print. D-pad left / right jumps straight to the
+A works as PLAY and B as EJECT; the keys show these twins in small print. D-pad left / right jumps straight to the
 previous / next song (with a short whir of the reels), while L1 / R1 stay
 real REW / FF.
 
@@ -75,8 +82,9 @@ printed on it:
 | --- | --- | --- |
 | D-pad up/down | | Previous / next tape |
 | L1 / R1 | | Among albums: jump to the previous / next letter. Among songs: a pile of tapes back / forward |
-| R2 (PLAY) | A | Put the tape in and play: an album from its first song, a song from that song |
-| L2 (STOP) | B, D-pad left | Back up a folder |
+| R2 (PLAY) | A | Put the tape in and play: an album from its first song, a song from that song. On the tape already in the player: back to the player |
+| L2 (EJECT) | B | Back to the player while a tape is in it; otherwise back up a folder |
+| D-pad left | | Back up a folder |
 | D-pad right | | Open an album to see its songs |
 
 Select + Start or the Menu button quits.
@@ -149,8 +157,9 @@ RetroCassette/            what gets installed on the device
     lib/style.lua         a tape's look from a hash of its name
     lib/tapeart.lua       drawing shared by spines and the cassette
     lib/fonts.lua         label fonts (assets/fonts, free licences)
-    lib/frame.lua         frame pacing and pocket mode
+    lib/frame.lua         frame pacing
     lib/keys.lua          the transport keys, shared by player and library
+    lib/battery.lua       the battery line (charge from sysfs)
     lib/loader.lua        reads songs on a background thread, 1 MB at a time
     lib/memory.lua        checks a song fits in the free memory
     lib/probe.lua         song lengths from file headers
