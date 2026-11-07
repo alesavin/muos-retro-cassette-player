@@ -21,7 +21,7 @@ local TWIN_SIZE = 13 -- the optional twin buttons are printed small and grey
 
 -- Width of a key's symbol(s).
 local function symbolWidth(name)
-	if name == "stop" or name == "play" then
+	if name == "play" then
 		return 2 * ICON + 4
 	end
 	return ICON
@@ -29,9 +29,8 @@ end
 
 local function symbol(name, x, y)
 	if name == "stop" then
-		-- STOP/EJECT
-		ui.icon("stop", x, y, ICON)
-		ui.icon("eject", x + ICON + 4, y, ICON)
+		-- EJECT (the key is still called "stop" in the layout)
+		ui.icon("eject", x, y, ICON)
 	elseif name == "play" then
 		-- PLAY/PAUSE
 		ui.icon("play", x, y, ICON)

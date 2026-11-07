@@ -5,7 +5,8 @@ See README.md for features, controls and layout.
 
 Design rule: the deck screen shows only a physical player. State is shown by
 parts of the player (latched keys, reels, tape packs, head, the
-cassette label), never by icons, text readouts or overlays. A tape's look comes
+cassette label), never by icons, text readouts or overlays. The one exception
+is the battery line in the key row (`lib/battery.lua`), the same on both screens. A tape's look comes
 from `lib/style.lua` (hash of its folder name) and must match between its
 library spine and the cassette in the player.
 

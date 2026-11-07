@@ -187,15 +187,16 @@ local function drawTimes(position, length, rl, rr)
 		return
 	end
 	local cx = (HUB_L + rl + HUB_R - rr) / 2
-	local f = Fonts.get("dotmatrix", 15, DPI)
+	-- The label font, like the cassette's own print: easy to read at a glance.
+	local f = Fonts.get("print", 14, DPI)
 	lg.setFont(f)
 	local function line(text, y, c)
 		lg.setColor(0, 0, 0, 0.7)
-		lg.printf(text, cx - 40 + 1, y + 1, 80, "center")
+		lg.printf(text, cx - 50 + 1, y + 1, 100, "center")
 		lg.setColor(c[1], c[2], c[3])
-		lg.printf(text, cx - 40, y, 80, "center")
+		lg.printf(text, cx - 50, y, 100, "center")
 	end
-	line(clock(position), HUB_Y - 17, { 1, 1, 1 })
+	line(clock(position), HUB_Y - 19, { 1, 1, 1 })
 	line("-" .. clock(length - position), HUB_Y + 1, { 1, 0.85, 0.45 })
 end
 

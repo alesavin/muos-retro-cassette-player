@@ -246,7 +246,7 @@ check("held rew reviews muted", not sources.b.playing and d:keysDown().rew == 1)
 d:release("rew")
 check("tap rew goes to previous song", d.mode == "ams" and d.amsTarget == 0)
 
--- Holding FF longer winds faster: 3x with sound, then 10x and 30x muted.
+-- Holding FF longer winds faster: 3x with sound, then 10x, 30x and 120x muted.
 do
 	local dh = newDeck()
 	dh:insert(Tape.new({ "a", "b" }), 0)
@@ -263,6 +263,28 @@ do
 	dh:release("ff")
 	dh:update(0.01)
 	check("release: plays on from there", dh.mode == "play" and sources.a.playing and sources.a.pitch == 1)
+	dh:press("ff")
+	dh.holdStart = dh.clock - 8 -- held for 8 s
+	check("hold ff: 120x after 8 s", dh:holdRate() == 120)
+	dh:release("ff")
+end
+
+-- A tape knows whether it holds a given list of songs.
+check("tape has these paths", Tape.new({ "a", "b" }):hasPaths({ "a", "b" }))
+check("tape: other order or length", not Tape.new({ "a", "b" }):hasPaths({ "b", "a" }) and not Tape.new({ "a", "b" }):hasPaths({ "a" }))
+
+-- Leaving the player while FF is held ends the cue without a skip.
+do
+	local dl = newDeck()
+	dl:insert(Tape.new({ "a", "b" }), 0)
+	dl:press("play")
+	dl:update(0.01)
+	dl:press("ff")
+	dl:update(0.1)
+	dl:letGo()
+	dl:release("ff")
+	dl:update(0.1)
+	check("let go: plays on, no skip", dl.mode == "play" and not dl.hold and dl:currentTrack().path == "a")
 end
 
 -- End of a song runs into the gap, then the next song; end of tape stops.

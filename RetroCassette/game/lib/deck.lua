@@ -3,7 +3,7 @@
 --
 --   stopped      FF/REW tap latches and winds until STOP or the end of the tape
 --   playing      FF held = cue (fast, high-pitched audio), REW held = review (muted);
---                both speed up the longer they're held (3x -> 10x -> 30x)
+--                both speed up the longer they're held (3x -> 10x -> 30x -> 120x)
 --                FF/REW tapped = wind to the next song / back to this or the previous song
 --   PLAY         while playing, pauses (the key stays half-way down); again resumes
 --   STOP         releases every key; pressed again while stopped, opens the lid
@@ -18,8 +18,9 @@ Deck.CUE_RATE = 3
 Deck.REVIEW_RATE = 4
 -- Holding FF / REW while playing speeds up the longer it's held: seconds held
 -- -> tape speed. Above CUE_RATE the music is muted and the tape just winds.
-Deck.CUE_STEPS = { { 0, Deck.CUE_RATE }, { 2, 10 }, { 5, 30 } }
-Deck.REVIEW_STEPS = { { 0, Deck.REVIEW_RATE }, { 2, 10 }, { 5, 30 } }
+-- The last step crosses an hour-long mix in about half a minute.
+Deck.CUE_STEPS = { { 0, Deck.CUE_RATE }, { 2, 10 }, { 5, 30 }, { 8, 120 } }
+Deck.REVIEW_STEPS = { { 0, Deck.REVIEW_RATE }, { 2, 10 }, { 5, 30 }, { 8, 120 } }
 Deck.TAP_TIME = 0.3
 -- How long the reels whir after a skip.
 Deck.SKIP_TIME = 0.35
@@ -196,6 +197,12 @@ function Deck:skip(dir)
 	self:remember()
 	self.skipTime, self.skipDir = Deck.SKIP_TIME, dir
 	return true
+end
+
+-- Ends a cue / review without the tap's skip: the player was left (L2) while
+-- FF / REW was held, so its release won't reach the deck.
+function Deck:letGo()
+	self.hold = nil
 end
 
 function Deck:release(key)

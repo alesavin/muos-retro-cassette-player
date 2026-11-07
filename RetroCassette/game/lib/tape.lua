@@ -17,6 +17,19 @@ function Tape.new(paths)
 	return self
 end
 
+-- True when the tape holds exactly these songs, in this order.
+function Tape:hasPaths(paths)
+	if #paths ~= #self.tracks then
+		return false
+	end
+	for i, p in ipairs(paths) do
+		if self.tracks[i].path ~= p then
+			return false
+		end
+	end
+	return true
+end
+
 function Tape:estimate()
 	local sum, n = 0, 0
 	for _, tr in ipairs(self.tracks) do

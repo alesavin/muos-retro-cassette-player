@@ -47,21 +47,16 @@ local steps = {
 	[250] = shot("05b-skipped"),
 	[252] = function() Input.keypressed("f") end, -- hold FF: cue
 	[290] = shot("05-cue"),
-	[292] = function() Input.keyreleased("f") tap("s") end, -- STOP
-	[330] = shot("06-stopped"),
-	[332] = function() tap("s") end, -- STOP again: eject to the library
-	[360] = shot("07-ejected"),
-	[362] = function() tap("s") end, -- L2 in the library: up a folder
+	[292] = function() Input.keyreleased("f") tap("s") end, -- EJECT: to the library, still playing
+	[330] = shot("06-library-playing"),
+	[332] = function() tap("s") end, -- EJECT in the library: back to the player
+	[360] = shot("07-back"),
+	[362] = function() tap("s") tap("left") end, -- to the library, up a folder
 	[380] = shot("08-up"),
 	[382] = function() tap("down") tap("down") tap("down") end, -- Midnight Synth
-	[400] = function() tap("d") end, -- PLAY the whole album
+	[400] = function() tap("d") end, -- PLAY: swaps the tape
 	[540] = shot("09-another-tape"),
-	[542] = function() tap("s") tap("s") end, -- stop and eject
-	[560] = function() Frame.POCKET_AFTER = 0.5 end,
-	[600] = shot("10-pocket"),
-	[602] = function() Frame.POCKET_AFTER = 30 tap("right") end, -- wakes the screen only
-	[620] = shot("11-woken"),
-	[640] = function() love.event.quit() end,
+	[560] = function() love.event.quit() end,
 }
 
 local frame = 0
